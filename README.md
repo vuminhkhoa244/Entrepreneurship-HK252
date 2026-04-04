@@ -1,1 +1,1 @@
-# Kh-i-nghi-p---HK252
+# Bài tập lớn khởi nghiệp
