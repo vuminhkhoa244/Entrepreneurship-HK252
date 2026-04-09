@@ -15,9 +15,10 @@ import {useRoute, useNavigation} from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import RenderHTML from 'react-native-render-html';
 import {ReaderAPI, BookmarkAPI} from '../services/api';
-import type {RootStackParamList} from '../App';
+import type {RootStackParamList} from '../types/navigation';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {COLORS, FONT_SIZES} from '../constants/theme';
+import { FONT_SIZES } from "../constants/theme";
+import { useTheme } from "../context/ThemeContext";
 
 const {width} = Dimensions.get('window');
 
@@ -39,6 +40,7 @@ export default function ReaderScreen() {
   const [noteInput, setNoteInput] = useState('');
 
   const scrollRef = useRef<ScrollView>(null);
+  const { colors } = useTheme();
 
   const loadChapter = useCallback(async (index: number) => {
     setLoading(true);
@@ -54,19 +56,23 @@ export default function ReaderScreen() {
 
   // Load contents and bookmarks
   useEffect(() => {
-    loadChapter(0);
-    ReaderAPI.contents(bookId)
-      .then(({data}: any) => {
+    async function loadInitialData() {
+      loadChapter(0);
+      try {
+        const {data} = await ReaderAPI.contents(bookId);
         if ('totalChapters' in data) setTotalChapters(data.totalChapters);
         if ('chapters' in data) setTotalChapters(data.chapters.length);
-      })
-      .catch(() => {});
-
-    BookmarkAPI.list(bookId)
-      .then(({data}) => {
+      } catch {
+        // silently ignore
+      }
+      try {
+        const {data} = await BookmarkAPI.list(bookId);
         setBookmarked(data.length > 0);
-      })
-      .catch(() => {});
+      } catch {
+        // silently ignore
+      }
+    }
+    loadInitialData();
   }, [bookId, loadChapter]);
 
   const goToChapter = (index: number) => {
@@ -118,7 +124,7 @@ export default function ReaderScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLORS.accent} />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -138,7 +144,7 @@ export default function ReaderScreen() {
       {/* Top Bar */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.white} />
+          <Ionicons name="arrow-back" size={24} color={colors.white} />
         </TouchableOpacity>
 
         <Text style={styles.title} numberOfLines={1}>
@@ -147,13 +153,13 @@ export default function ReaderScreen() {
 
         <View style={styles.topActions}>
           <TouchableOpacity onPress={toggleBookmark}>
-            <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={22} color={COLORS.white} />
+            <Ionicons name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={22} color={colors.white} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowNotes(true)}>
-            <Ionicons name="create-outline" size={22} color={COLORS.white} />
+            <Ionicons name="create-outline" size={22} color={colors.white} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowMenu(!showMenu)}>
-            <Ionicons name="ellipsis-vertical" size={22} color={COLORS.white} />
+            <Ionicons name="ellipsis-vertical" size={22} color={colors.white} />
           </TouchableOpacity>
         </View>
       </View>
@@ -164,11 +170,11 @@ export default function ReaderScreen() {
           <Text style={styles.menuLabel}>Font Size</Text>
           <View style={styles.fontControls}>
             <TouchableOpacity onPress={() => setFontSize(Math.max(FONT_SIZES.xs, fontSize - 2))}>
-              <Ionicons name="remove" size={24} color={COLORS.accent} />
+              <Ionicons name="remove" size={24} color={colors.accent} />
             </TouchableOpacity>
             <Text style={styles.fontSizeText}>{fontSize}px</Text>
             <TouchableOpacity onPress={() => setFontSize(Math.min(FONT_SIZES.xxl, fontSize + 2))}>
-              <Ionicons name="add" size={24} color={COLORS.accent} />
+              <Ionicons name="add" size={24} color={colors.accent} />
             </TouchableOpacity>
           </View>
           <TouchableOpacity style={styles.closeMenu} onPress={() => setShowMenu(false)}>
@@ -186,13 +192,13 @@ export default function ReaderScreen() {
           contentWidth={width - 32}
           source={{html: chapter.content}}
           tagsStyles={{
-            p: {color: COLORS.text, fontSize, lineHeight: fontSize * 1.6, marginBottom: 12},
-            h1: {color: COLORS.white, fontSize: fontSize * 1.5, fontWeight: 'bold', marginBottom: 8},
-            h2: {color: COLORS.white, fontSize: fontSize * 1.3, fontWeight: 'bold', marginBottom: 8},
-            h3: {color: COLORS.white, fontSize: fontSize * 1.2, fontWeight: 'bold', marginBottom: 8},
-            body: {color: COLORS.text, fontSize, lineHeight: fontSize * 1.6},
+            p: {color: colors.text, fontSize, lineHeight: fontSize * 1.6, marginBottom: 12},
+            h1: {color: colors.text, fontSize: fontSize * 1.5, fontWeight: 'bold', marginBottom: 8},
+            h2: {color: colors.text, fontSize: fontSize * 1.3, fontWeight: 'bold', marginBottom: 8},
+            h3: {color: colors.text, fontSize: fontSize * 1.2, fontWeight: 'bold', marginBottom: 8},
+            body: {color: colors.text, fontSize, lineHeight: fontSize * 1.6},
           }}
-          baseStyle={{color: COLORS.text}}
+          baseStyle={{color: colors.text}}
         />
       </ScrollView>
 
@@ -204,7 +210,7 @@ export default function ReaderScreen() {
           <Ionicons
             name="chevron-back"
             size={28}
-            color={currentChapterIndex === 0 ? COLORS.textMuted : COLORS.accent}
+            color={currentChapterIndex === 0 ? colors.textMuted : colors.accent}
           />
         </TouchableOpacity>
 
@@ -221,7 +227,7 @@ export default function ReaderScreen() {
           <Ionicons
             name="chevron-forward"
             size={28}
-            color={currentChapterIndex >= totalChapters - 1 ? COLORS.textMuted : COLORS.accent}
+            color={currentChapterIndex >= totalChapters - 1 ? colors.textMuted : colors.accent}
           />
         </TouchableOpacity>
       </View>
@@ -233,7 +239,7 @@ export default function ReaderScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Notes</Text>
               <TouchableOpacity onPress={() => setShowNotes(false)}>
-                <Ionicons name="close" size={24} color={COLORS.text} />
+                <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
             </View>
 
@@ -254,12 +260,12 @@ export default function ReaderScreen() {
                 value={noteInput}
                 onChangeText={setNoteInput}
                 placeholder="Add a note..."
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={colors.textMuted}
                 style={styles.textInput}
                 multiline
               />
               <TouchableOpacity style={styles.sendBtn} onPress={addNote}>
-                <Ionicons name="send" size={20} color={COLORS.white} />
+                <Ionicons name="send" size={20} color={colors.white} />
               </TouchableOpacity>
             </View>
           </View>
@@ -270,39 +276,43 @@ export default function ReaderScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: COLORS.background},
-  center: {flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background},
-  errorText: {color: COLORS.textDim, fontSize: FONT_SIZES.lg},
+  container: {flex: 1, backgroundColor: colors.background},
+  center: {flex: 1, justifyContent: 'center', alignItems: 'center'},
+  errorText: { fontSize: FONT_SIZES.lg, color: colors.text },
   topBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: COLORS.primary, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  title: {color: COLORS.white, fontSize: FONT_SIZES.md, fontWeight: '600', flex: 1, marginHorizontal: 12},
+  title: { fontSize: FONT_SIZES.md, fontWeight: '600', flex: 1, marginHorizontal: 12, color: colors.text },
   topActions: {flexDirection: 'row', gap: 12},
-  menu: {backgroundColor: COLORS.card, padding: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border},
-  menuLabel: {color: COLORS.textDim, fontSize: FONT_SIZES.sm, marginBottom: 8},
+  menu: { padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface },
+  menuLabel: { fontSize: FONT_SIZES.sm, marginBottom: 8, color: colors.text },
   fontControls: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24, marginBottom: 8},
-  fontSizeText: {color: COLORS.white, fontSize: FONT_SIZES.lg},
+  fontSizeText: { fontSize: FONT_SIZES.lg, color: colors.text },
   closeMenu: {alignItems: 'center', paddingVertical: 8},
-  closeMenuText: {color: COLORS.accent, fontSize: FONT_SIZES.md},
-  content: {flex: 1},
+  closeMenuText: { fontSize: FONT_SIZES.md, color: colors.accent },
+  content: {flex: 1, backgroundColor: colors.background},
   contentInner: {padding: 16},
   bottomBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 24, paddingVertical: 16,
-    backgroundColor: COLORS.primary, borderTopWidth: 1, borderTopColor: COLORS.border,
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  chapterInfo: {color: COLORS.text, fontSize: FONT_SIZES.sm},
+  chapterInfo: { fontSize: FONT_SIZES.sm, color: colors.text },
   modalOverlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end'},
-  modalContent: {backgroundColor: COLORS.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, height: '60%'},
-  modalHeader: {flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border},
-  modalTitle: {color: COLORS.white, fontSize: FONT_SIZES.lg, fontWeight: '600'},
-  notesList: {flex: 1, padding: 16},
-  notesEmpty: {color: COLORS.textDim, fontSize: FONT_SIZES.md, textAlign: 'center', marginTop: 32},
-  noteItem: {backgroundColor: COLORS.surface, borderRadius: 8, padding: 12, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: COLORS.accent},
-  noteText: {color: COLORS.text, fontSize: FONT_SIZES.sm},
-  noteInput: {flexDirection: 'row', alignItems: 'center', padding: 12, borderTopWidth: 1, borderTopColor: COLORS.border, gap: 8},
-  textInput: {flex: 1, color: COLORS.text, fontSize: FONT_SIZES.sm, minHeight: 40, maxHeight: 100, paddingHorizontal: 12, paddingTop: 10},
-  sendBtn: {backgroundColor: COLORS.accent, borderRadius: 20, width: 40, height: 40, justifyContent: 'center', alignItems: 'center'},
+  modalContent: { borderTopLeftRadius: 20, borderTopRightRadius: 20, height: '60%', backgroundColor: colors.surface },
+  modalHeader: {flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalTitle: { fontSize: FONT_SIZES.lg, fontWeight: '600', color: colors.text },
+  notesList: {flex: 1, padding: 16, backgroundColor: colors.background},
+  notesEmpty: { fontSize: FONT_SIZES.md, textAlign: 'center', marginTop: 32, color: colors.textDim },
+  noteItem: { borderRadius: 8, padding: 12, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: colors.accent, backgroundColor: colors.card },
+  noteText: { fontSize: FONT_SIZES.sm, color: colors.text },
+  noteInput: {flexDirection: 'row', alignItems: 'center', padding: 12, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface, gap: 8},
+  textInput: {flex: 1,  fontSize: FONT_SIZES.sm, minHeight: 40, maxHeight: 100, paddingHorizontal: 12, paddingTop: 10, color: colors.text, backgroundColor: colors.card },
+  sendBtn: { borderRadius: 20, width: 40, height: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.accent },
 });

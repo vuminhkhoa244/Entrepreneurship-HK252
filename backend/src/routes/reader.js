@@ -30,6 +30,7 @@ router.get('/:bookId/file', (req, res) => {
 
   if (book.file_type === 'pdf') {
     res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline');
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Content-Length', size);
 

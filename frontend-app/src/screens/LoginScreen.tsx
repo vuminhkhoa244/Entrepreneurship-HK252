@@ -11,11 +11,12 @@ import {
 import axios from 'axios';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '../App';
-import {AUTH_URL} from '../constants/config';
+import type {RootStackParamList} from '../types/navigation';
+import {BASE_URL} from '../constants/config';
 import {setToken} from '../services/auth';
-import {COLORS, FONT_SIZES} from '../constants/theme';
-import {AuthContext} from '../App';
+import { FONT_SIZES } from "../constants/theme";
+import { useTheme } from "../context/ThemeContext";
+import {AuthContext} from '../context/AuthContext';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -25,6 +26,8 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation<NavProp>();
   const {login} = useContext(AuthContext);
+  
+  const { colors } = useTheme();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -33,16 +36,13 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      const {data} = await axios.post(`${AUTH_URL}/auth/login`, {
+      const {data} = await axios.post(`${BASE_URL}/auth/login`, {
         email,
         password,
       });
       await setToken(data.token);
       login(data.user);
-      navigation.reset({
-        index: 0,
-        routes: [{name: 'Main'}],
-      });
+      // navigation.replace('Main');
     } catch (e: any) {
       Alert.alert('Login failed', e.response?.data?.error || 'Network error');
     } finally {
@@ -59,7 +59,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Email"
-          placeholderTextColor={COLORS.textDim}
+          placeholderTextColor={colors.textDim}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -68,7 +68,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Password"
-          placeholderTextColor={COLORS.textDim}
+          placeholderTextColor={colors.textDim}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -94,28 +94,28 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: COLORS.background, justifyContent: 'center', paddingHorizontal: 24},
-  card: {backgroundColor: COLORS.card, borderRadius: 16, padding: 24},
-  welcome: {color: COLORS.white, fontSize: FONT_SIZES.xxl, fontWeight: 'bold', marginBottom: 8},
-  subtitle: {color: COLORS.textDim, fontSize: FONT_SIZES.md, marginBottom: 32},
+  container: {flex: 1, backgroundColor: colors.background, justifyContent: 'center', paddingHorizontal: 24},
+  card: {borderRadius: 16, padding: 24, backgroundColor: colors.card},
+  welcome: {fontSize: FONT_SIZES.xxl, fontWeight: 'bold', marginBottom: 8, color: colors.text},
+  subtitle: { fontSize: FONT_SIZES.md, marginBottom: 32, color: colors.textDim },
   input: {
-    backgroundColor: COLORS.surface,
-    color: COLORS.text,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 16,
     fontSize: FONT_SIZES.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    color: colors.text,
   },
   button: {
-    backgroundColor: COLORS.accent,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
+    backgroundColor: colors.accent,
   },
-  buttonText: {color: '#fff', fontSize: FONT_SIZES.md, fontWeight: '600'},
-  link: {color: COLORS.accent, textAlign: 'center', marginTop: 20, fontSize: FONT_SIZES.md},
+  buttonText: {color: colors.white, fontSize: FONT_SIZES.md, fontWeight: '600'},
+  link: { textAlign: 'center', marginTop: 20, fontSize: FONT_SIZES.md, color: colors.accent },
 });

@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useContext, useState} from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,13 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '../App';
+import type {RootStackParamList} from '../types/navigation';
 import axios from 'axios';
-import {AUTH_URL} from '../constants/config';
+import {BASE_URL} from '../constants/config';
 import {setToken} from '../services/auth';
-import {COLORS, FONT_SIZES} from '../constants/theme';
+import { FONT_SIZES } from "../constants/theme";
+import { useTheme } from "../context/ThemeContext";
+import {AuthContext} from '../context/AuthContext';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
 
@@ -24,7 +26,7 @@ export default function RegisterScreen() {
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation<NavProp>();
-
+  const { colors } = useTheme();
   const handleRegister = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Email and password are required');
@@ -32,13 +34,13 @@ export default function RegisterScreen() {
     }
     setLoading(true);
     try {
-      const {data} = await axios.post(`${AUTH_URL}/auth/register`, {
+      const {data} = await axios.post(`${BASE_URL}/auth/register`, {
         email,
         password,
         displayName,
       });
       await setToken(data.token);
-      navigation.reset({index: 0, routes: [{name: 'Main'}]});
+      navigation.navigate('Login');
     } catch (e: any) {
       Alert.alert('Registration failed', e.response?.data?.error || 'Network error');
     } finally {
@@ -55,14 +57,14 @@ export default function RegisterScreen() {
         <TextInput
           style={styles.input}
           placeholder="Display name (optional)"
-          placeholderTextColor={COLORS.textDim}
+          placeholderTextColor={colors.textDim}
           value={displayName}
           onChangeText={setDisplayName}
         />
         <TextInput
           style={styles.input}
           placeholder="Email"
-          placeholderTextColor={COLORS.textDim}
+          placeholderTextColor={colors.textDim}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -71,7 +73,7 @@ export default function RegisterScreen() {
         <TextInput
           style={styles.input}
           placeholder="Password"
-          placeholderTextColor={COLORS.textDim}
+          placeholderTextColor={colors.textDim}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -90,16 +92,18 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: COLORS.background, justifyContent: 'center', paddingHorizontal: 24},
-  card: {backgroundColor: COLORS.card, borderRadius: 16, padding: 24},
-  title: {color: COLORS.white, fontSize: FONT_SIZES.xxl, fontWeight: 'bold', marginBottom: 8},
-  subtitle: {color: COLORS.textDim, fontSize: FONT_SIZES.md, marginBottom: 32},
+  container: {flex: 1, backgroundColor: colors.background, justifyContent: 'center', paddingHorizontal: 24},
+  card: {borderRadius: 16, padding: 24, backgroundColor: colors.card},
+  title: { fontSize: FONT_SIZES.xxl, fontWeight: 'bold', marginBottom: 8, color: colors.text },
+  subtitle: { fontSize: FONT_SIZES.md, marginBottom: 32, color: colors.textDim },
   input: {
-    backgroundColor: COLORS.surface, color: COLORS.text, borderRadius: 12,
     paddingHorizontal: 16, paddingVertical: 14, marginBottom: 16,
-    fontSize: FONT_SIZES.md, borderWidth: 1, borderColor: COLORS.border,
+    fontSize: FONT_SIZES.md, borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    color: colors.text,
   },
-  button: {backgroundColor: COLORS.accent, borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 8},
-  buttonText: {color: '#fff', fontSize: FONT_SIZES.md, fontWeight: '600'},
-  link: {color: COLORS.accent, textAlign: 'center', marginTop: 20, fontSize: FONT_SIZES.md},
+  button: { borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 8, backgroundColor: colors.accent },
+  buttonText: {color: colors.white, fontSize: FONT_SIZES.md, fontWeight: '600'},
+  link: { textAlign: 'center', marginTop: 20, fontSize: FONT_SIZES.md, color: colors.accent },
 });

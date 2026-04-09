@@ -4,7 +4,6 @@
     "slug": "ebook-reader",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "scheme": "ebook-reader",
     "splash": {
@@ -24,6 +23,8 @@
     "web": {
       "bundler": "metro"
     },
-    "plugins": []
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }

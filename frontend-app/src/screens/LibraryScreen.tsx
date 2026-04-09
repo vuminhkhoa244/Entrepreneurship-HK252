@@ -10,14 +10,15 @@ import {
 } from 'react-native';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import type {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
-import type {MainTabParamList, RootStackParamList} from '../App';
+import type {MainTabParamList, RootStackParamList} from '../types/navigation';
 import type {CompositeNavigationProp} from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import {LibraryAPI} from '../services/api';
 import type {Book} from '../types';
 import {BookCard} from '../components/BookCard';
 import UploadBookModal from '../components/UploadBookModal';
-import {COLORS, FONT_SIZES} from '../constants/theme';
+import { FONT_SIZES } from "../constants/theme";
+import { useTheme } from "../context/ThemeContext";
 
 type NavProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Library'>,
@@ -30,6 +31,8 @@ export default function LibraryScreen() {
   const [showUpload, setShowUpload] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const navigation = useNavigation<NavProp>();
+
+  const { colors } = useTheme();
 
   const fetchLibrary = useCallback(async () => {
     try {
@@ -75,12 +78,12 @@ export default function LibraryScreen() {
           </View>
         )}
       </View>
-      <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
     </TouchableOpacity>
   );
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.accent} /></View>;
+    return <View style={styles.center}><ActivityIndicator size="large" color={colors.accent} /></View>;
   }
 
   return (
@@ -90,7 +93,7 @@ export default function LibraryScreen() {
         <Text style={styles.heading}>My Library</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
-            <Ionicons name={viewMode === 'grid' ? 'list-outline' : 'grid-outline'} size={24} color={COLORS.text} />
+            <Ionicons name={viewMode === 'grid' ? 'list-outline' : 'grid-outline'} size={24} color={colors.text} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowUpload(true)} style={styles.uploadBtn}>
             <Ionicons name="add" size={24} color="#fff" />
@@ -101,7 +104,7 @@ export default function LibraryScreen() {
       {/* Content */}
       {books.length === 0 ? (
         <View style={styles.center}>
-          <Ionicons name="library-outline" size={64} color={COLORS.textMuted} />
+          <Ionicons name="library-outline" size={64} color={colors.textMuted} />
           <Text style={styles.emptyText}>Your library is empty</Text>
           <Text style={styles.emptySub}>Upload an EPUB or PDF to get started</Text>
           <TouchableOpacity style={styles.ctaBtn} onPress={() => setShowUpload(true)}>
@@ -146,7 +149,7 @@ const getColor = (id: string) => {
 };
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: COLORS.background},
+  container: {flex: 1, backgroundColor: colors.background},
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -154,21 +157,21 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 12,
   },
-  heading: {color: COLORS.white, fontSize: FONT_SIZES.xl, fontWeight: 'bold'},
+  heading: { fontSize: FONT_SIZES.xl, fontWeight: 'bold', color: colors.text },
   headerActions: {flexDirection: 'row', gap: 12, alignItems: 'center'},
   uploadBtn: {
-    backgroundColor: COLORS.accent,
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.accent,
   },
-  center: {flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background},
-  emptyText: {color: COLORS.textDim, fontSize: FONT_SIZES.lg, marginTop: 16},
-  emptySub: {color: COLORS.textMuted, fontSize: FONT_SIZES.md, marginTop: 4, marginBottom: 20},
-  ctaBtn: {backgroundColor: COLORS.accent, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12},
-  ctaText: {color: '#fff', fontSize: FONT_SIZES.md, fontWeight: '600'},
+  center: {flex: 1, justifyContent: 'center', alignItems: 'center'},
+  emptyText: { fontSize: FONT_SIZES.lg, marginTop: 16, color: colors.text },
+  emptySub: { fontSize: FONT_SIZES.md, marginTop: 4, marginBottom: 20, color: colors.textDim },
+  ctaBtn: { paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.accent },
+  ctaText: {color: colors.white, fontSize: FONT_SIZES.md, fontWeight: '600'},
   grid: {padding: 12},
   list: {padding: 8},
   listItem: {
@@ -176,7 +179,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.card,
   },
   cover: {
     width: 40,
@@ -187,10 +191,10 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   info: {flex: 1},
-  listTitle: {color: COLORS.text, fontSize: FONT_SIZES.md, fontWeight: '500'},
-  listAuthor: {color: COLORS.textDim, fontSize: FONT_SIZES.sm, marginTop: 2},
+  listTitle: { fontSize: FONT_SIZES.md, fontWeight: '500', color: colors.text },
+  listAuthor: { fontSize: FONT_SIZES.sm, marginTop: 2, color: colors.textDim },
   progressRow: {flexDirection: 'row', alignItems: 'center', marginTop: 6},
-  miniBar: {flex: 1, height: 3, backgroundColor: COLORS.surface, borderRadius: 2, overflow: 'hidden', marginRight: 6},
-  miniFill: {height: '100%', backgroundColor: COLORS.accent},
-  progressVal: {color: COLORS.textMuted, fontSize: FONT_SIZES.xs, minWidth: 30},
+  miniBar: {flex: 1, height: 3, borderRadius: 2, overflow: 'hidden', marginRight: 6, backgroundColor: colors.border},
+  miniFill: {height: '100%', backgroundColor: colors.accent },
+  progressVal: { fontSize: FONT_SIZES.xs, minWidth: 30, color: colors.textDim },
 });
