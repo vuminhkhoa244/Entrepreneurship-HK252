@@ -14,10 +14,8 @@ import type {RootStackParamList} from '../types/navigation';
 import axios from 'axios';
 import {BASE_URL} from '../constants/config';
 import {setToken} from '../services/auth';
-import { FONT_SIZES, DARK_COLORS } from "../constants/theme";
+import { FONT_SIZES } from "../constants/theme";
 import { useTheme } from "../context/ThemeContext";
-
-const defaultColors = DARK_COLORS;
 import {AuthContext} from '../context/AuthContext';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
@@ -29,6 +27,7 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation<NavProp>();
   const { colors } = useTheme();
+
   const handleRegister = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Email and password are required');
@@ -51,42 +50,42 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Start your reading journey</Text>
+    <View style={[styles.container, {backgroundColor: colors.background}]}>
+      <View style={[styles.card, {backgroundColor: colors.card}]}>
+        <Text style={[styles.title, {color: colors.text}]}>Create Account</Text>
+        <Text style={[styles.subtitle, {color: colors.textDim}]}>Start your reading journey</Text>
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, {borderColor: colors.border, backgroundColor: colors.surface, color: colors.text}]}
           placeholder="Display name (optional)"
-          placeholderTextColor={defaultColors.textDim}
+          placeholderTextColor={colors.textDim}
           value={displayName}
           onChangeText={setDisplayName}
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, {borderColor: colors.border, backgroundColor: colors.surface, color: colors.text}]}
           placeholder="Email"
-          placeholderTextColor={defaultColors.textDim}
+          placeholderTextColor={colors.textDim}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, {borderColor: colors.border, backgroundColor: colors.surface, color: colors.text}]}
           placeholder="Password"
-          placeholderTextColor={defaultColors.textDim}
+          placeholderTextColor={colors.textDim}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign Up</Text>}
+        <TouchableOpacity style={[styles.button, {backgroundColor: colors.accent}]} onPress={handleRegister} disabled={loading}>
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={[styles.buttonText, {color: colors.white}]}>Sign Up</Text>}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.link}>Already have an account? Sign In</Text>
+          <Text style={[styles.link, {color: colors.accent}]}>Already have an account? Sign In</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -94,18 +93,15 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: defaultColors.background, justifyContent: 'center', paddingHorizontal: 24},
-  card: {borderRadius: 16, padding: 24, backgroundColor: defaultColors.card},
-  title: { fontSize: FONT_SIZES.xxl, fontWeight: 'bold', marginBottom: 8, color: defaultColors.text },
-  subtitle: { fontSize: FONT_SIZES.md, marginBottom: 32, color: defaultColors.textDim },
+  container: {flex: 1, justifyContent: 'center', paddingHorizontal: 24},
+  card: {borderRadius: 16, padding: 24},
+  title: { fontSize: FONT_SIZES.xxl, fontWeight: 'bold', marginBottom: 8 },
+  subtitle: { fontSize: FONT_SIZES.md, marginBottom: 32 },
   input: {
     paddingHorizontal: 16, paddingVertical: 14, marginBottom: 16,
-    fontSize: FONT_SIZES.md, borderWidth: 1,
-    borderColor: defaultColors.border,
-    backgroundColor: defaultColors.surface,
-    color: defaultColors.text,
+    fontSize: FONT_SIZES.md, borderWidth: 1, borderRadius: 12,
   },
-  button: { borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 8, backgroundColor: defaultColors.accent },
-  buttonText: {color: defaultColors.white, fontSize: FONT_SIZES.md, fontWeight: '600'},
-  link: { textAlign: 'center', marginTop: 20, fontSize: FONT_SIZES.md, color: defaultColors.accent },
+  button: { borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
+  buttonText: { fontSize: FONT_SIZES.md, fontWeight: '600'},
+  link: { textAlign: 'center', marginTop: 20, fontSize: FONT_SIZES.md },
 });

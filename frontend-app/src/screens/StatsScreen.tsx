@@ -4,20 +4,28 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ScrollView,
 } from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import type {MainTabParamList} from '../types/navigation';
 import {AuthContext} from '../context/AuthContext';
 import {clearToken} from '../services/auth';
-import {LibraryAPI, ReaderAPI} from '../services/api';
+import {LibraryAPI} from '../services/api';
 import type {ReadingSession} from '../types';
-import { FONT_SIZES, DARK_COLORS } from "../constants/theme";
+import { FONT_SIZES } from "../constants/theme";
 import { useTheme } from "../context/ThemeContext";
 
-const defaultColors = DARK_COLORS;
+function StatCard({icon, label, value}: {icon: string; label: string; value: string}) {
+  const { colors } = useTheme(); 
+
+  return (
+    <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <Ionicons name={`${icon}-outline` as any} size={24} color={colors.accent} />
+      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: colors.textDim }]}>{label}</Text>
+    </View>
+  );
+}
 
 export default function StatsScreen() {
   const {logout} = useContext(AuthContext);
@@ -25,6 +33,7 @@ export default function StatsScreen() {
   const [sessions, setSessions] = useState<ReadingSession[]>([]);
   const [loading, setLoading] = useState(true);
   const { colors } = useTheme();
+
   const fetchData = useCallback(async () => {
     try {
       const {data} = await LibraryAPI.stats();
@@ -55,15 +64,15 @@ export default function StatsScreen() {
   };
 
   if (loading) {
-    return <View style={styles.center}><Text style={styles.loadingText}>Loading...</Text></View>;
+    return <View style={[styles.center, {backgroundColor: colors.background}]}><Text style={[styles.loadingText, {color: colors.text}]}>Loading...</Text></View>;
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, {backgroundColor: colors.background}]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Reading Stats</Text>
+        <Text style={[styles.title, {color: colors.text}]}>Reading Stats</Text>
         <TouchableOpacity onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color={defaultColors.error} />
+          <Ionicons name="log-out-outline" size={24} color={colors.error} />
         </TouchableOpacity>
       </View>
 
@@ -77,17 +86,17 @@ export default function StatsScreen() {
       )}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        <Text style={[styles.sectionTitle, {color: colors.text}]}>Recent Activity</Text>
         {sessions.length === 0 ? (
-          <Text style={styles.emptyText}>No reading sessions yet. Start reading!</Text>
+          <Text style={[styles.emptyText, {color: colors.textDim}]}>No reading sessions yet. Start reading!</Text>
         ) : (
           sessions.slice(0, 5).map(s => (
-            <View key={s.id} style={styles.sessionCard}>
-              <Ionicons name="book-outline" size={18} color={defaultColors.textDim} />
-              <Text style={styles.sessionText}>
+            <View key={s.id} style={[styles.sessionCard, {backgroundColor: colors.card}]}>
+              <Ionicons name="book-outline" size={18} color={colors.textDim} />
+              <Text style={[styles.sessionText, {color: colors.text}]}>
                 {s.pages_read} pages · {formatTime(s.duration_seconds)}
               </Text>
-              <Text style={styles.sessionDate}>
+              <Text style={[styles.sessionDate, {color: colors.textDim}]}>
                 {new Date(s.started_at).toLocaleDateString()}
               </Text>
             </View>
@@ -95,19 +104,6 @@ export default function StatsScreen() {
         )}
       </View>
     </ScrollView>
-  );
-}
-
-function StatCard({icon, label, value}: {icon: string; label: string; value: string}) {
-  const { colors } = useTheme(); 
-
-  return (
-    <View style={[styles.statCard, { backgroundColor: defaultColors.card, borderColor: defaultColors.border }]}>
-      <Ionicons name={`${icon}-outline` as any} size={24} color={defaultColors.accent} />
-      <Text style={[styles.statValue, { color: defaultColors.text }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: defaultColors.textDim }]}>{label}</Text>
-      
-    </View>
   );
 }
 
@@ -125,7 +121,6 @@ const styles = StyleSheet.create({
     margin: 6,
     alignItems: 'center',
     borderWidth: 1,
-
   },
   statValue: { fontSize: FONT_SIZES.xl, fontWeight: 'bold', marginTop: 8},
   statLabel: { fontSize: FONT_SIZES.sm, marginTop: 4},
