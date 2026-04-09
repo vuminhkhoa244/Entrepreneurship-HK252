@@ -14,8 +14,10 @@ import type {RootStackParamList} from '../types/navigation';
 import axios from 'axios';
 import {BASE_URL} from '../constants/config';
 import {setToken} from '../services/auth';
-import { FONT_SIZES } from "../constants/theme";
+import { FONT_SIZES, DARK_COLORS } from "../constants/theme";
 import { useTheme } from "../context/ThemeContext";
+
+const defaultColors = DARK_COLORS;
 import {AuthContext} from '../context/AuthContext';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
@@ -57,14 +59,14 @@ export default function RegisterScreen() {
         <TextInput
           style={styles.input}
           placeholder="Display name (optional)"
-          placeholderTextColor={colors.textDim}
+          placeholderTextColor={defaultColors.textDim}
           value={displayName}
           onChangeText={setDisplayName}
         />
         <TextInput
           style={styles.input}
           placeholder="Email"
-          placeholderTextColor={colors.textDim}
+          placeholderTextColor={defaultColors.textDim}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -73,7 +75,7 @@ export default function RegisterScreen() {
         <TextInput
           style={styles.input}
           placeholder="Password"
-          placeholderTextColor={colors.textDim}
+          placeholderTextColor={defaultColors.textDim}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -92,18 +94,18 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: colors.background, justifyContent: 'center', paddingHorizontal: 24},
-  card: {borderRadius: 16, padding: 24, backgroundColor: colors.card},
-  title: { fontSize: FONT_SIZES.xxl, fontWeight: 'bold', marginBottom: 8, color: colors.text },
-  subtitle: { fontSize: FONT_SIZES.md, marginBottom: 32, color: colors.textDim },
+  container: {flex: 1, backgroundColor: defaultColors.background, justifyContent: 'center', paddingHorizontal: 24},
+  card: {borderRadius: 16, padding: 24, backgroundColor: defaultColors.card},
+  title: { fontSize: FONT_SIZES.xxl, fontWeight: 'bold', marginBottom: 8, color: defaultColors.text },
+  subtitle: { fontSize: FONT_SIZES.md, marginBottom: 32, color: defaultColors.textDim },
   input: {
     paddingHorizontal: 16, paddingVertical: 14, marginBottom: 16,
     fontSize: FONT_SIZES.md, borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    color: colors.text,
+    borderColor: defaultColors.border,
+    backgroundColor: defaultColors.surface,
+    color: defaultColors.text,
   },
-  button: { borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 8, backgroundColor: colors.accent },
-  buttonText: {color: colors.white, fontSize: FONT_SIZES.md, fontWeight: '600'},
-  link: { textAlign: 'center', marginTop: 20, fontSize: FONT_SIZES.md, color: colors.accent },
+  button: { borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 8, backgroundColor: defaultColors.accent },
+  buttonText: {color: defaultColors.white, fontSize: FONT_SIZES.md, fontWeight: '600'},
+  link: { textAlign: 'center', marginTop: 20, fontSize: FONT_SIZES.md, color: defaultColors.accent },
 });

@@ -17,8 +17,10 @@ import {LibraryAPI} from '../services/api';
 import type {Book} from '../types';
 import {BookCard} from '../components/BookCard';
 import UploadBookModal from '../components/UploadBookModal';
-import { FONT_SIZES } from "../constants/theme";
+import { FONT_SIZES, DARK_COLORS } from "../constants/theme";
 import { useTheme } from "../context/ThemeContext";
+
+const defaultColors = DARK_COLORS;
 
 type NavProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Library'>,
@@ -78,12 +80,12 @@ export default function LibraryScreen() {
           </View>
         )}
       </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      <Ionicons name="chevron-forward" size={20} color={defaultColors.textMuted} />
     </TouchableOpacity>
   );
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={colors.accent} /></View>;
+    return <View style={styles.center}><ActivityIndicator size="large" color={defaultColors.accent} /></View>;
   }
 
   return (
@@ -93,7 +95,7 @@ export default function LibraryScreen() {
         <Text style={styles.heading}>My Library</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
-            <Ionicons name={viewMode === 'grid' ? 'list-outline' : 'grid-outline'} size={24} color={colors.text} />
+            <Ionicons name={viewMode === 'grid' ? 'list-outline' : 'grid-outline'} size={24} color={defaultColors.text} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowUpload(true)} style={styles.uploadBtn}>
             <Ionicons name="add" size={24} color="#fff" />
@@ -104,7 +106,7 @@ export default function LibraryScreen() {
       {/* Content */}
       {books.length === 0 ? (
         <View style={styles.center}>
-          <Ionicons name="library-outline" size={64} color={colors.textMuted} />
+          <Ionicons name="library-outline" size={64} color={defaultColors.textMuted} />
           <Text style={styles.emptyText}>Your library is empty</Text>
           <Text style={styles.emptySub}>Upload an EPUB or PDF to get started</Text>
           <TouchableOpacity style={styles.ctaBtn} onPress={() => setShowUpload(true)}>
@@ -149,7 +151,7 @@ const getColor = (id: string) => {
 };
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: colors.background},
+  container: {flex: 1, backgroundColor: defaultColors.background},
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -157,7 +159,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 12,
   },
-  heading: { fontSize: FONT_SIZES.xl, fontWeight: 'bold', color: colors.text },
+  heading: { fontSize: FONT_SIZES.xl, fontWeight: 'bold', color: defaultColors.text },
   headerActions: {flexDirection: 'row', gap: 12, alignItems: 'center'},
   uploadBtn: {
     width: 36,
@@ -165,13 +167,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.accent,
+    backgroundColor: defaultColors.accent,
   },
   center: {flex: 1, justifyContent: 'center', alignItems: 'center'},
-  emptyText: { fontSize: FONT_SIZES.lg, marginTop: 16, color: colors.text },
-  emptySub: { fontSize: FONT_SIZES.md, marginTop: 4, marginBottom: 20, color: colors.textDim },
-  ctaBtn: { paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.accent },
-  ctaText: {color: colors.white, fontSize: FONT_SIZES.md, fontWeight: '600'},
+  emptyText: { fontSize: FONT_SIZES.lg, marginTop: 16, color: defaultColors.text },
+  emptySub: { fontSize: FONT_SIZES.md, marginTop: 4, marginBottom: 20, color: defaultColors.textDim },
+  ctaBtn: { paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12, backgroundColor: defaultColors.accent },
+  ctaText: {color: defaultColors.white, fontSize: FONT_SIZES.md, fontWeight: '600'},
   grid: {padding: 12},
   list: {padding: 8},
   listItem: {
@@ -179,8 +181,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.card,
+    borderBottomColor: defaultColors.border,
+    backgroundColor: defaultColors.card,
   },
   cover: {
     width: 40,
@@ -191,10 +193,10 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   info: {flex: 1},
-  listTitle: { fontSize: FONT_SIZES.md, fontWeight: '500', color: colors.text },
-  listAuthor: { fontSize: FONT_SIZES.sm, marginTop: 2, color: colors.textDim },
+  listTitle: { fontSize: FONT_SIZES.md, fontWeight: '500', color: defaultColors.text },
+  listAuthor: { fontSize: FONT_SIZES.sm, marginTop: 2, color: defaultColors.textDim },
   progressRow: {flexDirection: 'row', alignItems: 'center', marginTop: 6},
-  miniBar: {flex: 1, height: 3, borderRadius: 2, overflow: 'hidden', marginRight: 6, backgroundColor: colors.border},
-  miniFill: {height: '100%', backgroundColor: colors.accent },
-  progressVal: { fontSize: FONT_SIZES.xs, minWidth: 30, color: colors.textDim },
+  miniBar: {flex: 1, height: 3, borderRadius: 2, overflow: 'hidden', marginRight: 6, backgroundColor: defaultColors.border},
+  miniFill: {height: '100%', backgroundColor: defaultColors.accent },
+  progressVal: { fontSize: FONT_SIZES.xs, minWidth: 30, color: defaultColors.textDim },
 });

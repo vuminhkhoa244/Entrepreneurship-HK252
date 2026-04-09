@@ -13,9 +13,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import axios from 'axios';
 import {getToken} from '../services/auth';
 import {BASE_URL} from '../constants/config';
-import { FONT_SIZES } from "../constants/theme";
-import { useTheme } from "../context/ThemeContext";
+import { FONT_SIZES, DARK_COLORS } from "../constants/theme";
 
+const defaultColors = DARK_COLORS;
 
 
 interface UploadModalProps {
@@ -26,7 +26,6 @@ interface UploadModalProps {
 
 export default function UploadBookModal({visible, onClose, onUploadSuccess}: UploadModalProps) {
   const [uploading, setUploading] = useState(false);
-  const { colors } = useTheme();
   const pickAndUpload = async () => {
     try {
       const res = await DocumentPicker.getDocumentAsync({
@@ -70,7 +69,7 @@ export default function UploadBookModal({visible, onClose, onUploadSuccess}: Upl
       <View style={styles.overlay}>
         <View style={styles.modal}>
           <TouchableOpacity onPress={onClose}>
-            <Ionicons name="close" size={24} color={colors.text} />
+            <Ionicons name="close" size={24} color={defaultColors.text} />
           </TouchableOpacity>
 
           <Text style={styles.title}>Upload Book</Text>
@@ -78,12 +77,12 @@ export default function UploadBookModal({visible, onClose, onUploadSuccess}: Upl
 
           {uploading ? (
             <View style={styles.uploading}>
-              <ActivityIndicator size="large" color={colors.accent} />
+              <ActivityIndicator size="large" color={defaultColors.accent} />
               <Text style={styles.progressText}>Uploading...</Text>
             </View>
           ) : (
             <TouchableOpacity style={styles.uploadBtn} onPress={pickAndUpload}>
-              <Ionicons name="cloud-upload-outline" size={40} color={colors.accent} />
+              <Ionicons name="cloud-upload-outline" size={40} color={defaultColors.accent} />
               <Text style={styles.uploadText}>Choose File</Text>
             </TouchableOpacity>
           )}
@@ -95,11 +94,11 @@ export default function UploadBookModal({visible, onClose, onUploadSuccess}: Upl
 
 const styles = StyleSheet.create({
   overlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end'},
-  modal: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, backgroundColor: colors.card },
-  title: { fontSize: FONT_SIZES.xl, fontWeight: 'bold', marginTop: 12, color: colors.text },
-  subtitle: { fontSize: FONT_SIZES.md, marginBottom: 24, color: colors.textDim },
+  modal: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, backgroundColor: defaultColors.card },
+  title: { fontSize: FONT_SIZES.xl, fontWeight: 'bold', marginTop: 12, color: defaultColors.text },
+  subtitle: { fontSize: FONT_SIZES.md, marginBottom: 24, color: defaultColors.textDim },
   uploading: {alignItems: 'center', paddingVertical: 24},
-  progressText: { fontSize: FONT_SIZES.md, marginTop: 16, color: colors.text },
-  uploadBtn: {alignItems: 'center', justifyContent: 'center', paddingVertical: 40, borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', borderColor: colors.border, backgroundColor: colors.surface },
-  uploadText: { fontSize: FONT_SIZES.lg, marginTop: 8, color: colors.text },
+  progressText: { fontSize: FONT_SIZES.md, marginTop: 16, color: defaultColors.text },
+  uploadBtn: {alignItems: 'center', justifyContent: 'center', paddingVertical: 40, borderRadius: 12, borderWidth: 2, borderStyle: 'dashed', borderColor: defaultColors.border, backgroundColor: defaultColors.surface },
+  uploadText: { fontSize: FONT_SIZES.lg, marginTop: 8, color: defaultColors.text },
 });

@@ -3,7 +3,7 @@ import {View, Text, StyleSheet, TouchableOpacity, Dimensions} from 'react-native
 import { Ionicons } from '@expo/vector-icons';
 import type {Book} from '../types';
 
-import { FONT_SIZES } from "../constants/theme";
+import { FONT_SIZES, DARK_COLORS } from "../constants/theme";
 import { useTheme } from "../context/ThemeContext";
 
 const COVER_COLORS = ['#e94560', '#4361ee', '#2ec4b6', '#ff9f1c', '#8338ec', '#3a86ff'];
@@ -57,7 +57,7 @@ export function BookListItem({book, onPress}: {book: Book; onPress: () => void})
         <Text style={styles.listTitle} numberOfLines={1}>{book.title}</Text>
         {book.author && <Text style={styles.listAuthor}>{book.author}</Text>}
       </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      <Ionicons name="chevron-forward" size={20} color={defaultColors.textMuted} />
     </TouchableOpacity>
   );
 }
@@ -65,8 +65,10 @@ export function BookListItem({book, onPress}: {book: Book; onPress: () => void})
 const {width} = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
 
+const defaultColors = DARK_COLORS;
+
 const styles = StyleSheet.create({
-  card: {width: CARD_WIDTH, marginBottom: 16, backgroundColor: colors.card, borderRadius: 8, padding: 8},
+  card: {width: CARD_WIDTH, marginBottom: 16, backgroundColor: defaultColors.card, borderRadius: 8, padding: 8},
   cover: {
     width: CARD_WIDTH,
     height: CARD_WIDTH * 1.4,
@@ -76,8 +78,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   coverMini: {width: 40, height: 56, borderRadius: 4, marginRight: 12},
-  title: { fontSize: FONT_SIZES.sm, fontWeight: '500', color: colors.text },
-  author: { fontSize: FONT_SIZES.xs, marginTop: 2, color: colors.textDim },
+  title: { fontSize: FONT_SIZES.sm, fontWeight: '500', color: defaultColors.text },
+  author: { fontSize: FONT_SIZES.xs, marginTop: 2, color: defaultColors.textDim },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -89,26 +91,26 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     overflow: 'hidden',
     marginRight: 6,
-    backgroundColor: colors.border,
+    backgroundColor: defaultColors.border,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.accent,
+    backgroundColor: defaultColors.accent,
   },
   progressText: {
     fontSize: FONT_SIZES.xs,
     minWidth: 30,
-    color: colors.textDim,
+    color: defaultColors.textDim,
   },
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.card,
+    borderBottomColor: defaultColors.border,
+    backgroundColor: defaultColors.card,
   },
   info: {flex: 1},
-  listTitle: { fontSize: FONT_SIZES.md, fontWeight: '500', color: colors.text },
-  listAuthor: { fontSize: FONT_SIZES.sm, marginTop: 2, color: colors.textDim },
+  listTitle: { fontSize: FONT_SIZES.md, fontWeight: '500', color: defaultColors.text },
+  listAuthor: { fontSize: FONT_SIZES.sm, marginTop: 2, color: defaultColors.textDim },
 });

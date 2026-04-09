@@ -14,8 +14,10 @@ import {AuthContext} from '../context/AuthContext';
 import {clearToken} from '../services/auth';
 import {LibraryAPI, ReaderAPI} from '../services/api';
 import type {ReadingSession} from '../types';
-import { FONT_SIZES } from "../constants/theme";
+import { FONT_SIZES, DARK_COLORS } from "../constants/theme";
 import { useTheme } from "../context/ThemeContext";
+
+const defaultColors = DARK_COLORS;
 
 export default function StatsScreen() {
   const {logout} = useContext(AuthContext);
@@ -61,7 +63,7 @@ export default function StatsScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Reading Stats</Text>
         <TouchableOpacity onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color={colors.error} />
+          <Ionicons name="log-out-outline" size={24} color={defaultColors.error} />
         </TouchableOpacity>
       </View>
 
@@ -81,7 +83,7 @@ export default function StatsScreen() {
         ) : (
           sessions.slice(0, 5).map(s => (
             <View key={s.id} style={styles.sessionCard}>
-              <Ionicons name="book-outline" size={18} color={colors.textDim} />
+              <Ionicons name="book-outline" size={18} color={defaultColors.textDim} />
               <Text style={styles.sessionText}>
                 {s.pages_read} pages · {formatTime(s.duration_seconds)}
               </Text>
@@ -100,10 +102,10 @@ function StatCard({icon, label, value}: {icon: string; label: string; value: str
   const { colors } = useTheme(); 
 
   return (
-    <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <Ionicons name={`${icon}-outline` as any} size={24} color={colors.accent} />
-      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: colors.textDim }]}>{label}</Text>
+    <View style={[styles.statCard, { backgroundColor: defaultColors.card, borderColor: defaultColors.border }]}>
+      <Ionicons name={`${icon}-outline` as any} size={24} color={defaultColors.accent} />
+      <Text style={[styles.statValue, { color: defaultColors.text }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: defaultColors.textDim }]}>{label}</Text>
       
     </View>
   );
