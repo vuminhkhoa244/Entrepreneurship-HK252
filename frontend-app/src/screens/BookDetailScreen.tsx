@@ -135,8 +135,8 @@ export default function BookDetailScreen() {
         {/* Actions */}
         <View style={styles.actions}>
           <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={openReader}>
-            <Ionicons name="book-outline" size={24} color={colors.accent} />
-            <Text style={[styles.primaryBtnText, { color: colors.accent }]}>
+            <Ionicons name="book-outline" size={24} color={colors.white} />
+            <Text style={[styles.primaryBtnText, { color: colors.white }]}>
               {book.progress && book.progress > 0
                 ? "Continue Reading"
                 : "Start Reading"}

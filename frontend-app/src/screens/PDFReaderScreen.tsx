@@ -158,7 +158,7 @@ export default function PDFReaderScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.white} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Reading PDF</Text>
         <View style={{ width: 24 }} />
@@ -168,7 +168,7 @@ export default function PDFReaderScreen() {
       {loading && (
         <View style={styles.loader}>
           <ActivityIndicator size="large" color={colors.accent} />
-          <Text style={styles.loadingText}>Rendering PDF...</Text>
+          <Text style={[styles.loadingText, { color: colors.textDim }]}>Rendering PDF...</Text>
         </View>
       )}
 
