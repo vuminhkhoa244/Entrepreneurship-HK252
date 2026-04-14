@@ -29,6 +29,7 @@ export default function ReaderScreen() {
 
   const [chapter, setChapter] = useState<any | null>(null);
   const [totalChapters, setTotalChapters] = useState(0);
+  const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [fontSize, setFontSize] = useState(FONT_SIZES.md);
   const [showMenu, setShowMenu] = useState(false);
@@ -44,6 +45,7 @@ export default function ReaderScreen() {
 
   const loadChapter = useCallback(async (index: number) => {
     setLoading(true);
+    setCurrentChapterIndex(index);
     try {
       const {data} = await ReaderAPI.chapter(bookId, index);
       setChapter(data);
@@ -57,7 +59,16 @@ export default function ReaderScreen() {
   // Load contents and bookmarks
   useEffect(() => {
     async function loadInitialData() {
-      loadChapter(0);
+      // First get the book to see saved progress
+      let savedChapter = 0;
+      try {
+        const { data: book } = await import('../services/api').then(m => m.LibraryAPI.get(bookId));
+        if (book?.current_chapter) {
+          savedChapter = book.current_chapter;
+        }
+      } catch {}
+
+      loadChapter(savedChapter);
       try {
         const {data} = await ReaderAPI.contents(bookId);
         if ('totalChapters' in data) setTotalChapters(data.totalChapters);
@@ -88,6 +99,14 @@ export default function ReaderScreen() {
       await ReaderAPI.setProgress(bookId, chapterIndex, chapterIndex, undefined, totalChapters);
     } catch {}
   };
+
+  // Save progress when leaving the screen
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', () => {
+      updateProgress(currentChapterIndex);
+    });
+    return unsubscribe;
+  }, [navigation, currentChapterIndex, totalChapters]);
 
   // fix #5: real bookmark toggle
   const toggleBookmark = async () => {
@@ -136,8 +155,6 @@ export default function ReaderScreen() {
       </View>
     );
   }
-
-  const currentChapterIndex = chapter.chapterIndex || 0;
 
   return (
     <View style={styles.container}>
