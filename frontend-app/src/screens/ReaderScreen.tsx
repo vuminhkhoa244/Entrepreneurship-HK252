@@ -59,7 +59,7 @@ export default function ReaderScreen() {
   // Load contents and bookmarks
   useEffect(() => {
     async function loadInitialData() {
-      // First get the book to see saved progress
+      // Try to resume from saved chapter
       let savedChapter = 0;
       try {
         const { data: book } = await import('../services/api').then(m => m.LibraryAPI.get(bookId));
@@ -155,6 +155,8 @@ export default function ReaderScreen() {
       </View>
     );
   }
+
+  const currentChapterIndex = chapter.chapterIndex || 0;
 
   return (
     <View style={styles.container}>

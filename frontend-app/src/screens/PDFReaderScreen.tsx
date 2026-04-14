@@ -12,7 +12,7 @@ import {useRoute, useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import {ReaderAPI} from '../services/api';
+import {ReaderAPI, LibraryAPI} from '../services/api';
 import { BASE_URL } from '../constants/config';
 import { getToken } from '../services/auth';
 import { FONT_SIZES } from "../constants/theme";
@@ -51,6 +51,19 @@ const PDF_VIEWER_HTML = (baseUrl: string, bookId: string, token: string, colors:
         document.getElementById('loader').style.display = 'none';
 
         const container = document.getElementById('container');
+        
+        // Track scroll position to report current page
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const pageNum = parseInt(entry.target.getAttribute('data-page'));
+              window.ReactNativeWebView.postMessage(
+                JSON.stringify({ currentPage: pageNum })
+              );
+            }
+          });
+        }, { threshold: 0.5 });
+
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const viewport = page.getViewport({ scale: 1.5 });
@@ -65,8 +78,11 @@ const PDF_VIEWER_HTML = (baseUrl: string, bookId: string, token: string, colors:
           pageDiv.style.display = 'flex';
           pageDiv.style.justifyContent = 'center';
           pageDiv.style.marginBottom = '4px';
+          pageDiv.setAttribute('data-page', i);
           pageDiv.appendChild(canvas);
           container.appendChild(pageDiv);
+
+          observer.observe(pageDiv);
 
           const ctx = canvas.getContext('2d');
           await page.render({ canvasContext: ctx, viewport }).promise;
@@ -103,6 +119,8 @@ export default function PDFReaderScreen() {
   const [loading, setLoading] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [pagesRead, setPagesRead] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(0);
   const [html, setHtml] = useState<string | null>(null);
   const { colors } = useTheme();
   // Start session
@@ -121,6 +139,24 @@ export default function PDFReaderScreen() {
     };
   }, [sessionId, pagesRead, bookId]);
 
+  // Load book metadata and save progress on exit
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: book } = await LibraryAPI.get(bookId);
+        if (book) {
+          setTotalPages(book.total_pages || 0);
+          setCurrentPage(book.current_page || 0);
+        }
+      } catch {}
+    })();
+
+    const unsubscribe = navigation.addListener('beforeRemove', () => {
+      ReaderAPI.setProgress(bookId, currentPage, currentPage, totalPages, undefined).catch(() => {});
+    });
+    return unsubscribe;
+  }, [bookId, navigation, currentPage, totalPages]);
+
   // Build PDF viewer HTML
   useEffect(() => {
     (async () => {
@@ -136,6 +172,9 @@ export default function PDFReaderScreen() {
       if (data.pages) {
         setLoading(false);
         setPagesRead(data.pages);
+      }
+      if (data.currentPage) {
+        setCurrentPage(data.currentPage);
       }
       if (data.error) {
         setLoading(false);
