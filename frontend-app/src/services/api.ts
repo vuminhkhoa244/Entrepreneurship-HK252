@@ -11,7 +11,11 @@ async function authHeaders(): Promise<Record<string, string>> {
 }
 
 client.interceptors.request.use(async (config) => {
-  Object.assign(config.headers, await authHeaders());
+  const token = await getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  config.headers['Content-Type'] = 'application/json';
   return config;
 });
 
