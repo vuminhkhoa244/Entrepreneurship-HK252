@@ -183,6 +183,7 @@ export default function ReaderScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Top Bar */}
+      {/* Top Bar - Chỗ này nên dùng colors.text thay vì colors.white */}
       <View
         style={[
           styles.topBar,
