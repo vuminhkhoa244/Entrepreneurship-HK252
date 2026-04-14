@@ -83,23 +83,32 @@ export default function ReaderScreen() {
     loadInitialData();
   }, [bookId, loadChapter]);
 
+  const updateProgress = useCallback(
+    async (chapterIndex: number) => {
+      try {
+        await ReaderAPI.setProgress(
+          bookId,
+          chapterIndex,
+          chapterIndex,
+          undefined,
+          totalChapters,
+        );
+      } catch {}
+    },
+    [bookId, totalChapters],
+  );
+
+  useEffect(() => {
+    if (totalChapters > 0 && chapter?.chapterIndex != null) {
+      updateProgress(chapter.chapterIndex);
+    }
+  }, [chapter?.chapterIndex, totalChapters, updateProgress]);
+
   const goToChapter = (index: number) => {
     if (index >= 0 && index < totalChapters) {
       loadChapter(index);
       scrollRef.current?.scrollTo({ y: 0, animated: true });
     }
-  };
-
-  const updateProgress = async (chapterIndex: number) => {
-    try {
-      await ReaderAPI.setProgress(
-        bookId,
-        chapterIndex,
-        chapterIndex,
-        undefined,
-        totalChapters,
-      );
-    } catch {}
   };
 
   const toggleBookmark = async () => {
@@ -295,7 +304,6 @@ export default function ReaderScreen() {
         <TouchableOpacity
           onPress={() => {
             goToChapter(currentChapterIndex + 1);
-            updateProgress(currentChapterIndex + 1);
           }}
           disabled={currentChapterIndex >= totalChapters - 1}
         >

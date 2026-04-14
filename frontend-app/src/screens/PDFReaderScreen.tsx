@@ -139,7 +139,7 @@ export default function PDFReaderScreen() {
     };
   }, [sessionId, pagesRead, bookId]);
 
-  // Load book metadata and save progress on exit
+  // Load book metadata
   useEffect(() => {
     (async () => {
       try {
@@ -150,12 +150,21 @@ export default function PDFReaderScreen() {
         }
       } catch {}
     })();
+  }, [bookId]);
 
+  // Save progress when leaving reader
+  useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', () => {
       ReaderAPI.setProgress(bookId, currentPage, currentPage, totalPages, undefined).catch(() => {});
     });
     return unsubscribe;
   }, [bookId, navigation, currentPage, totalPages]);
+
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > 0) {
+      ReaderAPI.setProgress(bookId, currentPage, currentPage, totalPages, undefined).catch(() => {});
+    }
+  }, [bookId, currentPage, totalPages]);
 
   // Build PDF viewer HTML
   useEffect(() => {
@@ -164,7 +173,7 @@ export default function PDFReaderScreen() {
       const viewerHtml = PDF_VIEWER_HTML(BASE_URL, bookId, token ?? '', colors);
       setHtml(viewerHtml);
     })();
-  }, [bookId]);
+  }, [bookId, colors]);
 
   const handleMessage = useCallback((event: any) => {
     try {
@@ -173,7 +182,7 @@ export default function PDFReaderScreen() {
         setLoading(false);
         setPagesRead(data.pages);
       }
-      if (data.currentPage) {
+      if (typeof data.currentPage === 'number') {
         setCurrentPage(data.currentPage);
       }
       if (data.error) {
