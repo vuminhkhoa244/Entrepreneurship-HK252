@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useRef} from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,131 +6,59 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Alert,
+  Modal,
+  TextInput,
+  ScrollView,
 } from 'react-native';
-import {WebView} from 'react-native-webview';
-import {useRoute, useNavigation} from '@react-navigation/native';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '../types/navigation';
+import Pdf from 'react-native-pdf';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
-import {ReaderAPI, LibraryAPI} from '../services/api';
+import {
+  ReaderAPI,
+  LibraryAPI,
+  BookmarkAPI,
+  HighlightAPI,
+  NoteAPI,
+} from '../services/api';
 import { BASE_URL } from '../constants/config';
 import { getToken } from '../services/auth';
-import { FONT_SIZES } from "../constants/theme";
-import { useTheme } from "../context/ThemeContext";
-
-
-const PDF_VIEWER_HTML = (baseUrl: string, bookId: string, token: string, colors: any) => `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: ${colors.background}; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-    #container { width: 100vw; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
-    #loader { color: ${colors.textDim}; text-align: center; padding: 40px 20px; }
-    #error { display: none; color: ${colors.error}; text-align: center; padding: 40px 20px; max-width: 80vw; }
-    canvas { display: block; max-width: 100%; margin: 0 auto; }
-  </style>
-  <script type="module">
-    import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs';
-
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
-
-    (async () => {
-      const pdfUrl = '${baseUrl}/reader/${bookId}/file?token=${token}';
-
-      try {
-        const loadingTask = pdfjsLib.getDocument({
-          url: pdfUrl,
-          cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/cmaps/',
-          cMapPacked: true,
-        });
-
-        const pdf = await loadingTask.promise;
-        document.getElementById('loader').style.display = 'none';
-
-        const container = document.getElementById('container');
-        
-        // Track scroll position to report current page
-        const observer = new IntersectionObserver((entries) => {
-          entries.forEach(entry => {
-            if (entry.isIntersecting) {
-              const pageNum = parseInt(entry.target.getAttribute('data-page'));
-              window.ReactNativeWebView.postMessage(
-                JSON.stringify({ currentPage: pageNum })
-              );
-            }
-          });
-        }, { threshold: 0.5 });
-
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const viewport = page.getViewport({ scale: 1.5 });
-
-          const canvas = document.createElement('canvas');
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-
-          // Container div for each page
-          const pageDiv = document.createElement('div');
-          pageDiv.style.width = '100%';
-          pageDiv.style.display = 'flex';
-          pageDiv.style.justifyContent = 'center';
-          pageDiv.style.marginBottom = '4px';
-          pageDiv.setAttribute('data-page', i);
-          pageDiv.appendChild(canvas);
-          container.appendChild(pageDiv);
-
-          observer.observe(pageDiv);
-
-          const ctx = canvas.getContext('2d');
-          await page.render({ canvasContext: ctx, viewport }).promise;
-        }
-
-        window.ReactNativeWebView.postMessage(
-          JSON.stringify({ pages: pdf.numPages })
-        );
-      } catch (err) {
-        document.getElementById('loader').style.display = 'none';
-        document.getElementById('error').style.display = 'block';
-        document.getElementById('error').textContent = 'Failed to load PDF: ' + err.message;
-        window.ReactNativeWebView.postMessage(
-          JSON.stringify({ error: err.message })
-        );
-      }
-    })();
-  </script>
-</head>
-<body>
-  <div id="loader">Loading PDF...</div>
-  <div id="container"></div>
-  <div id="error"></div>
-</body>
-</html>
-`;
+import { FONT_SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
+import type { Bookmark, Highlight, Note } from '../types';
 
 export default function PDFReaderScreen() {
   const route = useRoute<any>();
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { bookId } = route.params as { bookId: string };
 
   const [loading, setLoading] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [pagesRead, setPagesRead] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [html, setHtml] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pdfUri, setPdfUri] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+
+  const [scale, setScale] = useState(1.0);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
+
+  const [showTools, setShowTools] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [noteInput, setNoteInput] = useState('');
+
   const { colors } = useTheme();
-  // Start session
+
   useEffect(() => {
     ReaderAPI.startSession(bookId)
-      .then(res => setSessionId(res.data.sessionId))
+      .then((res) => setSessionId(res.data.sessionId))
       .catch(() => {});
   }, [bookId]);
 
-  // End session on unmount
   useEffect(() => {
     return () => {
       if (sessionId) {
@@ -139,80 +67,208 @@ export default function PDFReaderScreen() {
     };
   }, [sessionId, pagesRead, bookId]);
 
-  // Load book metadata
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data: book } = await LibraryAPI.get(bookId);
-        if (book) {
-          setTotalPages(book.total_pages || 0);
-          setCurrentPage(book.current_page || 0);
-        }
-      } catch {}
-    })();
+  const loadReaderData = useCallback(async () => {
+    try {
+      const [token, bookRes, bookmarkRes, noteRes, highlightRes] =
+        await Promise.all([
+          getToken(),
+          LibraryAPI.get(bookId),
+          BookmarkAPI.list(bookId),
+          NoteAPI.list(bookId),
+          HighlightAPI.list(bookId),
+        ]);
+
+      setAuthToken(token ?? '');
+      setPdfUri(`${BASE_URL}/reader/${bookId}/file`);
+
+      const book = bookRes.data;
+      if (book) {
+        setTotalPages(book.total_pages || 0);
+        setCurrentPage(Math.max(1, book.current_page || 1));
+      }
+
+      setBookmarks(bookmarkRes.data.filter((b) => (b.page || 0) > 0));
+      setNotes(noteRes.data.filter((n) => (n.page || 0) > 0));
+      setHighlights(highlightRes.data.filter((h) => (h.page || 0) > 0));
+    } catch {
+      Alert.alert('Error', 'Failed to load PDF reader data');
+    }
   }, [bookId]);
 
-  // Save progress when leaving reader
+  useEffect(() => {
+    loadReaderData();
+  }, [loadReaderData]);
+
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', () => {
-      ReaderAPI.setProgress(bookId, currentPage, currentPage, totalPages, undefined).catch(() => {});
+      if (totalPages > 0 && currentPage > 0) {
+        ReaderAPI.setProgress(
+          bookId,
+          currentPage,
+          currentPage,
+          totalPages,
+          undefined,
+        ).catch(() => {});
+      }
     });
     return unsubscribe;
   }, [bookId, navigation, currentPage, totalPages]);
 
   useEffect(() => {
     if (totalPages > 0 && currentPage > 0) {
-      ReaderAPI.setProgress(bookId, currentPage, currentPage, totalPages, undefined).catch(() => {});
+      ReaderAPI.setProgress(
+        bookId,
+        currentPage,
+        currentPage,
+        totalPages,
+        undefined,
+      ).catch(() => {});
     }
   }, [bookId, currentPage, totalPages]);
 
-  // Build PDF viewer HTML
-  useEffect(() => {
-    (async () => {
-      const token = await getToken();
-      const viewerHtml = PDF_VIEWER_HTML(BASE_URL, bookId, token ?? '', colors);
-      setHtml(viewerHtml);
-    })();
-  }, [bookId, colors]);
+  const jumpToPage = (page: number) => {
+    if (totalPages <= 0) return;
+    const next = Math.min(Math.max(page, 1), totalPages);
+    setCurrentPage(next);
+  };
 
-  const handleMessage = useCallback((event: any) => {
+  const addBookmark = async () => {
     try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.pages) {
-        setLoading(false);
-        setPagesRead(data.pages);
-      }
-      if (typeof data.currentPage === 'number') {
-        setCurrentPage(data.currentPage);
-      }
-      if (data.error) {
-        setLoading(false);
-        Alert.alert('PDF Error', data.error);
-      }
-    } catch {}
-  }, []);
+      const { data } = await BookmarkAPI.create(bookId, 0, currentPage);
+      setBookmarks((prev) => [data, ...prev]);
+    } catch {
+      Alert.alert('Error', 'Failed to bookmark page');
+    }
+  };
 
-  if (!html) {
+  const addHighlight = async () => {
+    try {
+      const { data } = await HighlightAPI.create(bookId, {
+        text: `Page ${currentPage} highlight`,
+        page: currentPage,
+        color: '#FFD700',
+      });
+      setHighlights((prev) => [data, ...prev]);
+    } catch {
+      Alert.alert('Error', 'Failed to add highlight');
+    }
+  };
+
+  const addNote = async () => {
+    if (!noteInput.trim()) return;
+    try {
+      const { data } = await NoteAPI.create(bookId, {
+        content: noteInput.trim(),
+        page: currentPage,
+      });
+      setNotes((prev) => [data, ...prev]);
+      setNoteInput('');
+    } catch {
+      Alert.alert('Error', 'Failed to save note');
+    }
+  };
+
+  const source =
+    pdfUri && authToken
+      ? {
+          uri: pdfUri,
+          headers: { Authorization: `Bearer ${authToken}` },
+          cache: true,
+        }
+      : null;
+
+  if (!source) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.accent} />
-        <Text style={styles.loadingText}>Loading PDF viewer...</Text>
+        <Text style={[styles.loadingText, { color: colors.textDim }]}>Loading PDF...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            borderBottomColor: colors.border,
+            backgroundColor: colors.surface,
+          },
+        ]}
+      >
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Reading PDF</Text>
-        <View style={{ width: 24 }} />
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Reading PDF</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={addBookmark}>
+            <Ionicons name="bookmark-outline" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={addHighlight}>
+            <Ionicons name="brush-outline" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowNotes(true)}>
+            <Ionicons name="create-outline" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowTools((v) => !v)}>
+            <Ionicons name="ellipsis-vertical" size={22} color={colors.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* WebView rendering PDF */}
+      {showTools && (
+        <View
+          style={[
+            styles.tools,
+            {
+              backgroundColor: colors.surface,
+              borderBottomColor: colors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.toolLabel, { color: colors.text }]}>Zoom</Text>
+          <View style={styles.zoomRow}>
+            <TouchableOpacity
+              onPress={() =>
+                setScale((s) => Math.max(0.8, +(s - 0.1).toFixed(1)))
+              }
+            >
+              <Ionicons name="remove" size={24} color={colors.accent} />
+            </TouchableOpacity>
+            <Text style={[styles.zoomText, { color: colors.text }]}>
+              {Math.round(scale * 100)}%
+            </Text>
+            <TouchableOpacity
+              onPress={() => setScale((s) => Math.min(3, +(s + 0.1).toFixed(1)))}
+            >
+              <Ionicons name="add" size={24} color={colors.accent} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      <Pdf
+        source={source}
+        page={currentPage}
+        scale={scale}
+        minScale={0.8}
+        maxScale={3.0}
+        onLoadComplete={(pages) => {
+          setTotalPages(pages);
+          setPagesRead(pages);
+          setLoading(false);
+        }}
+        onPageChanged={(page) => {
+          setCurrentPage(page);
+        }}
+        onError={() => {
+          setLoading(false);
+          Alert.alert('PDF Error', 'Failed to render PDF');
+        }}
+        style={styles.pdf}
+      />
+
       {loading && (
         <View style={styles.loader}>
           <ActivityIndicator size="large" color={colors.accent} />
@@ -220,29 +276,173 @@ export default function PDFReaderScreen() {
         </View>
       )}
 
-      <WebView
-        originWhitelist={['*']}
-        source={{ html }}
-        style={{ display: loading ? 'none' : 'flex' }}
-        onMessage={handleMessage}
-        javaScriptEnabled
-        domStorageEnabled
-        allowsInlineMediaPlayback
-        startInLoadingState
-      />
+      <View
+        style={[
+          styles.bottomBar,
+          { backgroundColor: colors.surface, borderTopColor: colors.border },
+        ]}
+      >
+        <TouchableOpacity onPress={() => jumpToPage(currentPage - 1)} disabled={currentPage <= 1}>
+          <Ionicons
+            name="chevron-back"
+            size={28}
+            color={currentPage <= 1 ? colors.textMuted : colors.accent}
+          />
+        </TouchableOpacity>
+
+        <Text style={[styles.pageInfo, { color: colors.text }]}>
+          Page {currentPage} / {totalPages || '-'}
+        </Text>
+
+        <TouchableOpacity
+          onPress={() => jumpToPage(currentPage + 1)}
+          disabled={totalPages > 0 ? currentPage >= totalPages : false}
+        >
+          <Ionicons
+            name="chevron-forward"
+            size={28}
+            color={totalPages > 0 && currentPage >= totalPages ? colors.textMuted : colors.accent}
+          />
+        </TouchableOpacity>
+      </View>
+
+      <Modal visible={showNotes} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Notes & Marks</Text>
+              <TouchableOpacity onPress={() => setShowNotes(false)}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={[styles.notesList, { backgroundColor: colors.background }]}>
+              {bookmarks.slice(0, 5).map((b) => (
+                <Text key={b.id} style={[styles.itemText, { color: colors.text }]}>
+                  Bookmark: page {b.page}
+                </Text>
+              ))}
+              {highlights.slice(0, 10).map((h) => (
+                <Text key={h.id} style={[styles.itemText, { color: colors.text }]}>
+                  Highlight: page {h.page}
+                </Text>
+              ))}
+              {notes.slice(0, 20).map((n) => (
+                <Text key={n.id} style={[styles.itemText, { color: colors.text }]}>
+                  Note p.{n.page}: {n.content}
+                </Text>
+              ))}
+            </ScrollView>
+
+            <View
+              style={[
+                styles.noteInputWrap,
+                {
+                  borderTopColor: colors.border,
+                  backgroundColor: colors.surface,
+                },
+              ]}
+            >
+              <TextInput
+                value={noteInput}
+                onChangeText={setNoteInput}
+                placeholder={`Add note on page ${currentPage}`}
+                placeholderTextColor={colors.textMuted}
+                style={[
+                  styles.textInput,
+                  { color: colors.text, backgroundColor: colors.card },
+                ]}
+                multiline
+              />
+              <TouchableOpacity
+                style={[styles.sendBtn, { backgroundColor: colors.accent }]}
+                onPress={addNote}
+              >
+                <Ionicons name="send" size={20} color={colors.white} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, 
-    borderBottomWidth: 1, 
-  },
-  headerTitle: {  fontSize: FONT_SIZES.md, fontWeight: '600' },
+  pdf: { flex: 1, width: '100%' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  headerTitle: { fontSize: FONT_SIZES.md, fontWeight: '600' },
+  headerActions: { flexDirection: 'row', gap: 10 },
+  tools: { padding: 12, borderBottomWidth: 1 },
+  toolLabel: { fontSize: FONT_SIZES.sm, marginBottom: 8 },
+  zoomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  zoomText: { fontSize: FONT_SIZES.md },
   loader: { position: 'absolute', top: '50%', left: 0, right: 0, alignItems: 'center' },
-  loadingText: { fontSize: FONT_SIZES.md, marginTop: 16 },
+  loadingText: { fontSize: FONT_SIZES.md, marginTop: 12 },
+  bottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+  },
+  pageInfo: { fontSize: FONT_SIZES.sm },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    height: '60%',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 14,
+    borderBottomWidth: 1,
+  },
+  modalTitle: { fontSize: FONT_SIZES.lg, fontWeight: '600' },
+  notesList: { flex: 1, padding: 14 },
+  itemText: { fontSize: FONT_SIZES.sm, marginBottom: 8 },
+  noteInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderTopWidth: 1,
+    gap: 8,
+  },
+  textInput: {
+    flex: 1,
+    borderRadius: 8,
+    minHeight: 40,
+    maxHeight: 100,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    fontSize: FONT_SIZES.sm,
+  },
+  sendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
