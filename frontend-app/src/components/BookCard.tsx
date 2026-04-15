@@ -67,8 +67,8 @@ export function BookListItem({book, onPress}: {book: Book; onPress: () => void})
 const styles = StyleSheet.create({
   card: {width: CARD_WIDTH, marginBottom: 16, borderRadius: 8, padding: 8},
   cover: {
-    width: CARD_WIDTH,
-    height: CARD_WIDTH * 1.4,
+    width: '100%',
+    height: (CARD_WIDTH - 16) * 1.4,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
