@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -50,7 +50,10 @@ export default function PDFReaderScreen() {
   const [showTools, setShowTools] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [noteInput, setNoteInput] = useState('');
+  const [pdfReady, setPdfReady] = useState(false);
+  const [forcedPage, setForcedPage] = useState<number | null>(null);
 
+  const pageRef = useRef(1);
   const { colors } = useTheme();
 
   useEffect(() => {
@@ -78,13 +81,17 @@ export default function PDFReaderScreen() {
           HighlightAPI.list(bookId),
         ]);
 
+      const initialPage = Math.max(1, bookRes.data?.current_page || 1);
+      pageRef.current = initialPage;
+      setCurrentPage(initialPage);
+      setForcedPage(initialPage);
+
       setAuthToken(token ?? '');
       setPdfUri(`${BASE_URL}/reader/${bookId}/file`);
 
       const book = bookRes.data;
       if (book) {
         setTotalPages(book.total_pages || 0);
-        setCurrentPage(Math.max(1, book.current_page || 1));
       }
 
       setBookmarks(bookmarkRes.data.filter((b) => (b.page || 0) > 0));
@@ -100,22 +107,34 @@ export default function PDFReaderScreen() {
   }, [loadReaderData]);
 
   useEffect(() => {
+    setPdfReady(false);
+    setLoading(true);
+  }, [pdfUri, authToken]);
+
+  useEffect(() => {
+    pageRef.current = currentPage;
+  }, [currentPage]);
+
+  useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', () => {
-      if (totalPages > 0 && currentPage > 0) {
+      const page = pageRef.current;
+      if (totalPages > 0 && page > 0) {
         ReaderAPI.setProgress(
           bookId,
-          currentPage,
-          currentPage,
+          page,
+          page,
           totalPages,
           undefined,
         ).catch(() => {});
       }
     });
     return unsubscribe;
-  }, [bookId, navigation, currentPage, totalPages]);
+  }, [bookId, navigation, totalPages]);
 
   useEffect(() => {
-    if (totalPages > 0 && currentPage > 0) {
+    if (!pdfReady || totalPages <= 0 || currentPage <= 0) return;
+
+    const timeout = setTimeout(() => {
       ReaderAPI.setProgress(
         bookId,
         currentPage,
@@ -123,13 +142,18 @@ export default function PDFReaderScreen() {
         totalPages,
         undefined,
       ).catch(() => {});
-    }
-  }, [bookId, currentPage, totalPages]);
+    }, 350);
+
+    return () => clearTimeout(timeout);
+  }, [bookId, currentPage, totalPages, pdfReady]);
 
   const jumpToPage = (page: number) => {
     if (totalPages <= 0) return;
     const next = Math.min(Math.max(page, 1), totalPages);
+    if (next === pageRef.current) return;
+    pageRef.current = next;
     setCurrentPage(next);
+    setForcedPage(next);
   };
 
   const addBookmark = async () => {
@@ -168,14 +192,17 @@ export default function PDFReaderScreen() {
     }
   };
 
-  const source =
-    pdfUri && authToken
-      ? {
-          uri: pdfUri,
-          headers: { Authorization: `Bearer ${authToken}` },
-          cache: true,
-        }
-      : null;
+  const source = useMemo(
+    () =>
+      pdfUri && authToken
+        ? {
+            uri: pdfUri,
+            headers: { Authorization: `Bearer ${authToken}` },
+            cache: true,
+          }
+        : null,
+    [pdfUri, authToken],
+  );
 
   if (!source) {
     return (
@@ -250,21 +277,28 @@ export default function PDFReaderScreen() {
 
       <Pdf
         source={source}
-        page={currentPage}
+        page={forcedPage ?? undefined}
         scale={scale}
         minScale={0.8}
         maxScale={3.0}
-        onLoadComplete={(pages) => {
+        onLoadComplete={(pages, page) => {
           setTotalPages(pages);
           setPagesRead(pages);
+          pageRef.current = page;
+          setCurrentPage(page);
+          setPdfReady(true);
           setLoading(false);
+          setForcedPage(null);
         }}
         onPageChanged={(page) => {
+          pageRef.current = page;
           setCurrentPage(page);
+          setForcedPage(null);
         }}
-        onError={() => {
+        onError={(error) => {
           setLoading(false);
-          Alert.alert('PDF Error', 'Failed to render PDF');
+          setPdfReady(false);
+          Alert.alert('PDF Error', String(error));
         }}
         style={styles.pdf}
       />
