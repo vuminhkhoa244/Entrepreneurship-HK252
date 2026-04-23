@@ -205,13 +205,13 @@ cd frontend-app
 #### Step 4: Build APK for Android
 
 ```bash
-eas build --platform android --local
+eas build --platform android --profile developement --local
 ```
 
 Or build in the cloud (doesn't require local Android setup):
 
 ```bash
-eas build --platform android
+eas build --platform android --profile developement
 ```
 
 #### Step 5: Download and Install APK
