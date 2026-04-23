@@ -2,7 +2,7 @@
 //   Android emulator: 10.0.2.2
 //   iOS simulator:   localhost
 //   Physical device:  your machine's LAN IP
-const HOST = '192.168.43.39';
+const HOST = '10.229.120.85';
 const PORT = 4000;
 
 export const BASE_URL = `http://${HOST}:${PORT}/api`;

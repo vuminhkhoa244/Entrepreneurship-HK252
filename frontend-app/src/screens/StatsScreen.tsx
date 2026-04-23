@@ -7,6 +7,7 @@ import {
   ScrollView,
 } from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import {AuthContext} from '../context/AuthContext';
 import {clearToken} from '../services/auth';
@@ -33,6 +34,7 @@ export default function StatsScreen() {
   const [sessions, setSessions] = useState<ReadingSession[]>([]);
   const [loading, setLoading] = useState(true);
   const { colors } = useTheme();
+  const tabBarHeight = useBottomTabBarHeight();
 
   const fetchData = useCallback(async () => {
     try {
@@ -67,14 +69,14 @@ export default function StatsScreen() {
     return <View style={[styles.center, {backgroundColor: colors.background}]}><Text style={[styles.loadingText, {color: colors.text}]}>Loading...</Text></View>;
   }
 
-  return (
-    <ScrollView style={[styles.container, {backgroundColor: colors.background}]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, {color: colors.text}]}>Reading Stats</Text>
-        <TouchableOpacity onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color={colors.error} />
-        </TouchableOpacity>
-      </View>
+   return (
+     <ScrollView style={[styles.container, {backgroundColor: colors.background}]} contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}>
+       <View style={styles.header}>
+         <Text style={[styles.title, {color: colors.text}]}>Reading Stats</Text>
+         <TouchableOpacity onPress={handleLogout}>
+           <Ionicons name="log-out-outline" size={24} color={colors.error} />
+         </TouchableOpacity>
+       </View>
 
       {stats && (
         <View style={styles.grid}>

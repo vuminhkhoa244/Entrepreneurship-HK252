@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { AuthContext } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { clearToken, isAuthenticated } from '../services/auth';
@@ -19,6 +20,7 @@ export default function SettingsScreen() {
   const { logout, user } = useContext(AuthContext);
   const { mode, setMode, colors } = useTheme();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const tabBarHeight = useBottomTabBarHeight();
 
   useFocusEffect(
     useCallback(() => {
@@ -42,12 +44,12 @@ export default function SettingsScreen() {
 
   const c = colors;
 
-  return (
-    <ScrollView style={[s.container, { backgroundColor: c.background }]}>
-      <View style={{ padding: 20 }}>
-        {/* Đã cập nhật c.white thành c.text để tự động đổi màu chữ theo theme */}
-        <Text style={[s.title, { color: c.text }]}>Settings</Text>
-      </View>
+   return (
+     <ScrollView style={[s.container, { backgroundColor: c.background }]} contentContainerStyle={{ paddingBottom: tabBarHeight + 20 }}>
+       <View style={{ padding: 20 }}>
+         {/* Đã cập nhật c.white thành c.text để tự động đổi màu chữ theo theme */}
+         <Text style={[s.title, { color: c.text }]}>Settings</Text>
+       </View>
 
       {/* Profile */}
       {isLoggedIn && (

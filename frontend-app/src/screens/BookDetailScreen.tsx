@@ -14,10 +14,8 @@ import type { RootStackParamList } from "../types/navigation";
 import { Ionicons } from "@expo/vector-icons";
 import { LibraryAPI } from "../services/api";
 import type { Book } from "../types";
-
-
-import { FONT_SIZES } from "../constants/theme";
 import { useTheme } from "../context/ThemeContext";
+import { FONT_SIZES } from "../constants/theme";
 
 export default function BookDetailScreen() {
   const route = useRoute<any>();
@@ -28,7 +26,6 @@ export default function BookDetailScreen() {
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 3. Gọi hook để lấy bộ màu động
   const { colors } = useTheme();
 
   const fetchBook = useCallback(async () => {
@@ -143,9 +140,30 @@ export default function BookDetailScreen() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.secondaryBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={openNotes}>
+          <TouchableOpacity
+            style={[styles.secondaryBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={openNotes}
+          >
             <Ionicons name="create-outline" size={24} color={colors.accent} />
             <Text style={[styles.secondaryBtnText, { color: colors.accent }]}>Notes & Highlights</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.aiBtn,
+              { backgroundColor: colors.accent, borderColor: colors.accent },
+            ]}
+            onPress={() => {
+              navigation.navigate("AI", {
+                bookId,
+                fileType: book.file_type,
+              });
+            }}
+          >
+            <Ionicons name="sparkles-outline" size={24} color={colors.white} />
+            <Text style={[styles.aiBtnText, { color: colors.white }]}>
+              Ask AI Assistant
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -247,6 +265,15 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.md,
     fontWeight: "600",
   },
+  aiBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 16,
+  },
+  aiBtnText: { fontSize: FONT_SIZES.md, fontWeight: "600" },
   dangerBtn: {
     flexDirection: "row",
     alignItems: "center",

@@ -66,46 +66,55 @@ export const ReaderAPI = {
       sessionId,
       pagesRead,
     }),
-};
+  };
 
-// ── Highlights ───────────────────────────────────────────────────
-
-export const HighlightAPI = {
-  list: (bookId: string) =>
-    client.get<Highlight[]>(`/reader/${bookId}/highlights`),
-
-  create: (bookId: string, data: { text: string; page?: number; color?: string }) =>
-    client.post<Highlight>(`/reader/${bookId}/highlights`, data),
-
-  delete: (bookId: string, highlightId: string) =>
-    client.delete(`/reader/${bookId}/highlights/${highlightId}`),
-};
-
-// ── Notes ────────────────────────────────────────────────────────
-
-export const NoteAPI = {
-  list: (bookId: string) => client.get<Note[]>(`/reader/${bookId}/notes`),
-
-  create: (
-    bookId: string,
-    data: { content: string; highlightId?: string; page?: number },
-  ) => client.post<Note>(`/reader/${bookId}/notes`, data),
-
-  update: (bookId: string, noteId: string, content: string) =>
-    client.patch(`/reader/${bookId}/notes/${noteId}`, { content }),
-
-  delete: (bookId: string, noteId: string) =>
-    client.delete(`/reader/${bookId}/notes/${noteId}`),
-};
-
-// ── Bookmarks ────────────────────────────────────────────────────
+// ── Bookmarks ───────────────────────────────────────────────────────
 
 export const BookmarkAPI = {
-  list: (bookId: string) => client.get<Bookmark[]>(`/reader/${bookId}/bookmarks`),
-
-  create: (bookId: string, chapter?: number, page?: number) =>
-    client.post<Bookmark>(`/reader/${bookId}/bookmarks`, { chapter, page }),
-
+  list: (bookId: string) => client.get<Bookmark[]>(`/bookmarks/${bookId}`),
+  create: (bookId: string, chapter: number, page: number) =>
+    client.post<Bookmark>(`/bookmarks/${bookId}`, { chapter, page }),
   delete: (bookId: string, bookmarkId: string) =>
-    client.delete(`/reader/${bookId}/bookmarks/${bookmarkId}`),
+    client.delete(`/bookmarks/${bookId}/${bookmarkId}`),
 };
+
+// ── Notes ───────────────────────────────────────────────────────────
+
+export const NoteAPI = {
+  list: (bookId: string) => client.get<Note[]>(`/notes/${bookId}`),
+  create: (bookId: string, data: { content: string; highlighted_text?: string; page?: number }) =>
+    client.post<Note>(`/notes/${bookId}`, data),
+  delete: (noteId: string) => client.delete(`/notes/${noteId}`),
+};
+
+// ── Highlights ─────────────────────────────────────────────────────
+
+export const HighlightAPI = {
+  list: (bookId: string) => client.get<Highlight[]>(`/highlights/${bookId}`),
+  create: (bookId: string, data: { text: string; location?: string; page?: number; color?: string }) =>
+    client.post<Highlight>(`/highlights/${bookId}`, data),
+  delete: (highlightId: string) => client.delete(`/highlights/${highlightId}`),
+};
+
+// ── AI Features ───────────────────────────────────────────────────
+
+export const AIAPI = {
+  summarizeChapter: (bookId: string, chapterIndex: number) =>
+    client.post<{ summary: string }>(`/ai/${bookId}/summarize/chapter`, {
+      chapterIndex,
+    }),
+
+  summarizeText: (bookId: string, text: string) =>
+    client.post<{ summary: string }>(`/ai/${bookId}/summarize/text`, { text }),
+
+  extractKeyIdeas: (bookId: string, text: string) =>
+    client.post<{ ideas: string[] }>(`/ai/${bookId}/key-ideas`, { text }),
+
+  generateBulletSummary: (bookId: string, text: string) =>
+    client.post<{ bullets: string[] }>(`/ai/${bookId}/bullet-summary`, { text }),
+
+  askQuestion: (bookId: string, question: string, context?: string) =>
+    client.post<{ answer: string }>(`/ai/${bookId}/ask`, { question, context }),
+};
+
+

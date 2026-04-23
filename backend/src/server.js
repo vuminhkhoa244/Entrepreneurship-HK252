@@ -7,6 +7,7 @@ import { getDb } from './db/index.js';
 import authRoutes from './routes/auth.js';
 import libraryRoutes from './routes/library.js';
 import readerRoutes from './routes/reader.js';
+import aiRoutes from './routes/ai.js';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use('/uploads', express.static(resolve(__dirname, '..', 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/library', libraryRoutes);
 app.use('/api/reader', readerRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));

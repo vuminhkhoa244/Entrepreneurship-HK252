@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import type {BottomTabNavigationProp} from '@react-navigation/bottom-tabs';
 import type {MainTabParamList, RootStackParamList} from '../types/navigation';
 import type {CompositeNavigationProp} from '@react-navigation/native';
@@ -37,6 +38,7 @@ export default function LibraryScreen() {
   const [showUpload, setShowUpload] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const navigation = useNavigation<NavProp>();
+  const tabBarHeight = useBottomTabBarHeight();
 
   const { colors } = useTheme();
 
@@ -123,7 +125,7 @@ export default function LibraryScreen() {
           keyExtractor={i => i.id}
           renderItem={renderGrid}
           numColumns={2}
-          contentContainerStyle={styles.grid}
+          contentContainerStyle={[styles.grid, { paddingBottom: tabBarHeight + 20 }]}
           refreshing={loading}
           onRefresh={fetchLibrary}
         />
@@ -132,7 +134,7 @@ export default function LibraryScreen() {
           data={books}
           keyExtractor={i => i.id}
           renderItem={renderItem}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight + 20 }]}
           refreshing={loading}
           onRefresh={fetchLibrary}
         />

@@ -14,7 +14,7 @@ import {
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import RenderHTML from "react-native-render-html";
-import { ReaderAPI, BookmarkAPI } from "../services/api";
+import { ReaderAPI, BookmarkAPI, AIAPI } from "../services/api";
 import type { RootStackParamList } from "../types/navigation";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { FONT_SIZES } from "../constants/theme";
@@ -41,6 +41,8 @@ export default function ReaderScreen() {
 
   const [notes, setNotes] = useState<{ id: string; content: string }[]>([]);
   const [noteInput, setNoteInput] = useState("");
+  const [showAI, setShowAI] = useState(false);
+  const [showAIOptions, setShowAIOptions] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const { colors } = useTheme();
@@ -216,6 +218,9 @@ export default function ReaderScreen() {
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowNotes(true)}>
             <Ionicons name="create-outline" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowAIOptions(true)}>
+            <Ionicons name="sparkles-outline" size={22} color={colors.accent} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowMenu(!showMenu)}>
             <Ionicons name="ellipsis-vertical" size={22} color={colors.text} />
@@ -393,6 +398,134 @@ export default function ReaderScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* AI Options Modal */}
+      <Modal visible={showAIOptions} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View
+            style={[styles.modalContent, { backgroundColor: colors.surface }]}
+          >
+            <View
+              style={[styles.modalHeader, { borderBottomColor: colors.border }]}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Ionicons name="sparkles" size={24} color={colors.accent} />
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  AI Assistant
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowAIOptions(false)}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={[styles.optionsList, { backgroundColor: colors.background }]}>
+              <Text style={[styles.optionsHeader, { color: colors.textDim }]}>
+                Chapter {currentChapterIndex + 1} Actions
+              </Text>
+
+              <TouchableOpacity
+                style={[styles.optionItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => {
+                  setShowAIOptions(false);
+                  navigation.navigate("AI", {
+                    bookId,
+                    fileType,
+                    chapterIndex: currentChapterIndex,
+                  });
+                }}
+              >
+                <View style={[styles.optionIcon, { backgroundColor: colors.accent + "20" }]}>
+                  <Ionicons name="document-text-outline" size={24} color={colors.accent} />
+                </View>
+                <View style={styles.optionContent}>
+                  <Text style={[styles.optionTitle, { color: colors.text }]}>
+                    Summarize Chapter
+                  </Text>
+                  <Text style={[styles.optionDesc, { color: colors.textDim }]}>
+                    Get AI-generated chapter summary
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.optionItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => {
+                  setShowAIOptions(false);
+                  navigation.navigate("AI", {
+                    bookId,
+                    fileType,
+                    chapterIndex: currentChapterIndex,
+                  });
+                }}
+              >
+                <View style={[styles.optionIcon, { backgroundColor: colors.success + "20" }]}>
+                  <Ionicons name="bulb-outline" size={24} color={colors.success} />
+                </View>
+                <View style={styles.optionContent}>
+                  <Text style={[styles.optionTitle, { color: colors.text }]}>
+                    Key Ideas
+                  </Text>
+                  <Text style={[styles.optionDesc, { color: colors.textDim }]}>
+                    Extract main concepts and ideas
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.optionItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => {
+                  setShowAIOptions(false);
+                  navigation.navigate("AI", {
+                    bookId,
+                    fileType,
+                    chapterIndex: currentChapterIndex,
+                  });
+                }}
+              >
+                <View style={[styles.optionIcon, { backgroundColor: colors.warning + "20" }]}>
+                  <Ionicons name="list-outline" size={24} color={colors.warning} />
+                </View>
+                <View style={styles.optionContent}>
+                  <Text style={[styles.optionTitle, { color: colors.text }]}>
+                    Bullet Summary
+                  </Text>
+                  <Text style={[styles.optionDesc, { color: colors.textDim }]}>
+                    Quick overview in bullet points
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.optionItem,
+                  { backgroundColor: colors.card, borderColor: colors.border, marginTop: 16 },
+                ]}
+                onPress={() => {
+                  setShowAIOptions(false);
+                  navigation.navigate("AI", { bookId, fileType });
+                }}
+              >
+                <View style={[styles.optionIcon, { backgroundColor: colors.info + "20" }]}>
+                  <Ionicons name="chatbubble-outline" size={24} color="#3b82f6" />
+                </View>
+                <View style={styles.optionContent}>
+                  <Text style={[styles.optionTitle, { color: colors.text }]}>
+                    Ask AI Assistant
+                  </Text>
+                  <Text style={[styles.optionDesc, { color: colors.textDim }]}>
+                    Open chat with full context
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -447,7 +580,7 @@ const styles = StyleSheet.create({
   modalContent: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    height: "60%",
+    height: "70%",
   },
   modalHeader: {
     flexDirection: "row",
@@ -456,6 +589,27 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   modalTitle: { fontSize: FONT_SIZES.lg, fontWeight: "600" },
+  optionsList: { flex: 1, padding: 16 },
+  optionsHeader: { fontSize: FONT_SIZES.sm, marginBottom: 12, textAlign: "center", textTransform: "uppercase", letterSpacing: 1 },
+  optionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    gap: 12,
+    borderWidth: 1,
+  },
+  optionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  optionContent: { flex: 1 },
+  optionTitle: { fontSize: FONT_SIZES.md, fontWeight: "600", marginBottom: 4 },
+  optionDesc: { fontSize: FONT_SIZES.sm },
   notesList: { flex: 1, padding: 16 },
   notesEmpty: { fontSize: FONT_SIZES.md, textAlign: "center", marginTop: 32 },
   noteItem: {

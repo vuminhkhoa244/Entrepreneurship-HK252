@@ -8,6 +8,7 @@ export type RootStackParamList = {
   Reader: {bookId: string; fileType: 'epub' | 'pdf'};
   PDFReader: {bookId: string};
   Notes: {bookId: string};
+  AI: {bookId: string; fileType: 'epub' | 'pdf'; chapterIndex?: number; page?: number};
 };
 
 export type MainTabParamList = {

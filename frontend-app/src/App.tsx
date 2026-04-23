@@ -3,6 +3,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { isAuthenticated } from "./services/auth";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
@@ -13,6 +15,7 @@ import PDFReaderScreen from "./screens/PDFReaderScreen";
 import NotesScreen from "./screens/NotesScreen";
 import StatsScreen from "./screens/StatsScreen";
 import SettingsScreen from "./screens/SettingsScreen";
+import AIScreen from "./screens/AIScreen";
 
 import { useTheme, ThemeProvider } from "./context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,11 +30,11 @@ import { AuthContext } from "./context/AuthContext";
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// ── Main Tabs (Tự gọi theme context bên trong) ───────────────────────
+// ── Main Tabs (with safe area handling) ────────────────────────────────
 
 function MainTabs() {
-  // Lấy colors trực tiếp từ hook, không cần qua props nữa
-  const { colors } = useTheme(); 
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
@@ -41,9 +44,17 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: colors.primary,
           borderTopColor: colors.border,
+          borderTopWidth: 1,
+          paddingBottom: Math.max(insets.bottom, 8),
+          paddingTop: 8,
+          height: 60 + insets.bottom,
+          elevation: 0,
+          shadowOpacity: 0,
         },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textDim,
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '500' },
+        tabBarItemStyle: { paddingVertical: 4 },
       }}
     >
       <Tab.Screen
@@ -142,6 +153,11 @@ function ThemedApp() {
                 component={NotesScreen}
                 options={{ title: "Notes & Highlights" }}
               />
+               <Stack.Screen
+                 name="AI"
+                 component={AIScreen}
+                 options={{ headerShown: false }}
+               />
             </>
           ) : (
             <>
@@ -168,7 +184,9 @@ function ThemedApp() {
 export default function App() {
   return (
     <ThemeProvider>
-      <ThemedApp />
+      <SafeAreaProvider>
+        <ThemedApp />
+      </SafeAreaProvider>
     </ThemeProvider>
   );
 }

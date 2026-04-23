@@ -5,6 +5,7 @@ import { upload } from '../middleware/upload.js';
 import { extractEpubMetadata, extractPdfInfo } from '../utils/book-parser.js';
 import { extname, join } from 'path';
 import { existsSync } from 'fs';
+import crypto from 'crypto';
 
 const router = express.Router();
 
