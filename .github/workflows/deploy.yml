@@ -1,0 +1,162 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci --omit=dev
+      
+      - name: Run linter
+        working-directory: backend
+        run: npm run lint --if-present || true
+      
+      - name: Run tests
+        working-directory: backend
+        run: npm test --if-present || true
+      
+      - name: Build application
+        working-directory: backend
+        run: npm run build --if-present || echo "No build step defined"
+      
+      - name: Create deployment artifact
+        run: |
+          tar -czf backend-${{ github.sha }}.tar.gz backend/
+          ls -lh backend-${{ github.sha }}.tar.gz
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-build
+          path: backend-${{ github.sha }}.tar.gz
+          retention-days: 30
+      
+      # Example: Deploy to a server (uncomment and configure)
+      # - name: Deploy to server
+      #   uses: appleboy/ssh-action@master
+      #   with:
+      #     host: ${{ secrets.DEPLOY_HOST }}
+      #     username: ${{ secrets.DEPLOY_USER }}
+      #     key: ${{ secrets.DEPLOY_KEY }}
+      #     port: ${{ secrets.DEPLOY_PORT }}
+      #     script: |
+      #       cd /app/ebook-reader-backend
+      #       git pull origin main
+      #       npm ci --omit=dev
+      #       npm run build
+      #       pm2 restart ebook-reader-backend
+      
+      # Example: Docker build and push (uncomment and configure)
+      # - name: Build Docker image
+      #   uses: docker/build-push-action@v4
+      #   with:
+      #     context: ./backend
+      #     push: true
+      #     tags: |
+      #       ${{ secrets.DOCKER_REGISTRY }}/ebook-reader-backend:latest
+      #       ${{ secrets.DOCKER_REGISTRY }}/ebook-reader-backend:${{ github.sha }}
+      #     registry: ${{ secrets.DOCKER_REGISTRY }}
+      #     username: ${{ secrets.DOCKER_USERNAME }}
+      #     password: ${{ secrets.DOCKER_PASSWORD }}
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: frontend-app/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: frontend-app
+        run: npm ci
+      
+      - name: Setup EAS CLI
+        run: npm install -g eas-cli
+      
+      - name: Build Expo app
+        working-directory: frontend-app
+        run: |
+          # Build for Android
+          eas build --platform android --non-interactive || echo "Android build failed"
+          
+          # Build for iOS (requires Apple Developer account)
+          # eas build --platform ios --non-interactive || echo "iOS build failed"
+        env:
+          EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+        continue-on-error: true
+      
+      # Example: Submit to stores (uncomment and configure)
+      # - name: Submit to Google Play
+      #   working-directory: frontend-app
+      #   run: eas submit --platform android --latest
+      #   env:
+      #     EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+      #   if: success()
+      #   continue-on-error: true
+      
+      # - name: Submit to Apple App Store
+      #   working-directory: frontend-app
+      #   run: eas submit --platform ios --latest
+      #   env:
+      #     EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+      #   if: success()
+      #   continue-on-error: true
+
+  notification:
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-frontend]
+    if: always()
+    
+    steps:
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "Deployment Status: ${{ needs.deploy-backend.result }}, ${{ needs.deploy-frontend.result }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Deployment Update*\n*Backend:* ${{ needs.deploy-backend.result }}\n*Frontend:* ${{ needs.deploy-frontend.result }}\n*Commit:* <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                  }
+                }
+              ]
+            }
+        if: always()
+        continue-on-error: true

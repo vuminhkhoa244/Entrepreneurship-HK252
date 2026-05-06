@@ -1,5 +1,5 @@
 import multer from 'multer';
-import { extname, join } from 'path';
+import { extname } from 'path';
 import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from './logging.js';
@@ -11,7 +11,7 @@ const MAX_SIZE = parseInt(process.env.MAX_FILE_SIZE_MB || '100') * 1024 * 1024;
 // Magic numbers for file type validation
 const MAGIC_NUMBERS = {
   pdf: Buffer.from([0x25, 0x50, 0x44, 0x46]), // %PDF
-  epub: Buffer.from([0x50, 0x4B, 0x03, 0x04])  // ZIP header
+  epub: Buffer.from([0x50, 0x4b, 0x03, 0x04]), // ZIP header
 };
 
 // Create uploads dir
@@ -27,7 +27,7 @@ const storage = multer.diskStorage({
     // Use UUID to prevent directory traversal and filename attacks
     const safeName = `${uuidv4()}-${Date.now()}${ext}`;
     cb(null, safeName);
-  }
+  },
 });
 
 /**
@@ -49,13 +49,13 @@ function validateFileMagic(buffer, ext) {
 const fileFilter = (req, file, cb) => {
   try {
     const ext = extname(file.originalname).toLowerCase();
-    
+
     // Validate extension
     if (!ALLOWED_TYPES.includes(ext)) {
       logger.warn('File upload rejected: invalid extension', {
         userId: req.user?.id,
         extension: ext,
-        originalName: file.originalname
+        originalName: file.originalname,
       });
       cb(new Error(`Only EPUB and PDF files allowed. Got: ${ext}`));
       return;
@@ -66,17 +66,21 @@ const fileFilter = (req, file, cb) => {
       logger.warn('File upload rejected: invalid MIME type', {
         userId: req.user?.id,
         mimeType: file.mimetype,
-        originalName: file.originalname
+        originalName: file.originalname,
       });
       cb(new Error(`Invalid file type: ${file.mimetype}`));
       return;
     }
 
     // Prevent directory traversal
-    if (file.originalname.includes('..') || file.originalname.includes('/') || file.originalname.includes('\\')) {
+    if (
+      file.originalname.includes('..') ||
+      file.originalname.includes('/') ||
+      file.originalname.includes('\\')
+    ) {
       logger.warn('File upload rejected: path traversal attempt', {
         userId: req.user?.id,
-        originalName: file.originalname
+        originalName: file.originalname,
       });
       cb(new Error('Invalid filename'));
       return;
@@ -100,15 +104,17 @@ export function validateUploadedFile(req, res, next) {
   try {
     const ext = extname(req.file.filename).toLowerCase();
     const buffer = readFileSync(req.file.path);
-    
+
     if (!validateFileMagic(buffer, ext)) {
       logger.warn('File upload rejected: magic number mismatch', {
         userId: req.user?.id,
-        extension: ext
+        extension: ext,
       });
       // Delete the file
-      import('fs').then(fs => fs.promises.unlink(req.file.path)).catch(() => {});
-      return res.status(400).json({ error: 'Invalid file format. File content does not match extension.' });
+      import('fs').then((fs) => fs.promises.unlink(req.file.path)).catch(() => {});
+      return res
+        .status(400)
+        .json({ error: 'Invalid file format. File content does not match extension.' });
     }
 
     next();
@@ -123,7 +129,6 @@ export const upload = multer({
   fileFilter,
   limits: {
     fileSize: MAX_SIZE,
-    files: 1 // Only one file per request
-  }
+    files: 1, // Only one file per request
+  },
 });
-

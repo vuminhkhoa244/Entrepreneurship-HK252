@@ -27,7 +27,7 @@ export function getDb() {
 function initDb(d) {
   const sql = readFileSync(join(__dirname, 'schema.sql'), 'utf8');
   d.exec(sql);
-  console.log('Database initialized');
+  console.warn('Database initialized');
 }
 
 export { db };

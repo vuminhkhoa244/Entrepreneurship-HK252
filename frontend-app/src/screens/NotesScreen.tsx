@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useCallback} from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,18 +8,20 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
-import {useRoute} from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import {HighlightAPI, NoteAPI} from '../services/api';
-import type {Highlight, Note} from '../types';
-import { FONT_SIZES } from "../constants/theme";
-import { useTheme } from "../context/ThemeContext";
+import { HighlightAPI, NoteAPI } from '../services/api';
+import type { Highlight, Note } from '../types';
+import { FONT_SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
+import type { RootStackParamList } from '../types/navigation';
 
 type TabType = 'notes' | 'highlights';
 
 export default function NotesScreen() {
-  const route = useRoute<any>();
-  const {bookId} = route.params as {bookId: string};
+  const route = useRoute<RouteProp<RootStackParamList, 'Notes'>>();
+  const { bookId } = route.params;
 
   const [activeTab, setActiveTab] = useState<TabType>('notes');
   const [notes, setNotes] = useState<Note[]>([]);
@@ -47,33 +49,33 @@ export default function NotesScreen() {
     fetchData();
   }, [fetchData]);
 
-  const renderNote = ({item}: {item: Note}) => (
+  const renderNote = ({ item }: { item: Note }) => (
     <View style={styles.card}>
       {item.highlighted_text && (
-        <View style={[styles.highlightBar, {borderLeftColor: item.color || colors.highlight}]}>
-          <Text style={styles.highlightText}>"{item.highlighted_text}"</Text>
+        <View style={[styles.highlightBar, { borderLeftColor: item.color || colors.highlight }]}>
+          <Text style={styles.highlightText}>&quot;{item.highlighted_text}&quot;</Text>
         </View>
       )}
       <Text style={styles.noteContent}>{item.content}</Text>
-      <Text style={styles.noteDate}>
-        {new Date(item.created_at).toLocaleDateString()}
-      </Text>
+      <Text style={styles.noteDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
     </View>
   );
 
-  const renderHighlight = ({item}: {item: Highlight}) => (
+  const renderHighlight = ({ item }: { item: Highlight }) => (
     <View style={styles.card}>
-      <View style={[styles.highlightBar, {borderLeftColor: item.color}]}>
-        <Text style={styles.highlightText}>"{item.text}"</Text>
-        <Text style={styles.noteDate}>
-          {new Date(item.created_at).toLocaleDateString()}
-        </Text>
+      <View style={[styles.highlightBar, { borderLeftColor: item.color }]}>
+        <Text style={styles.highlightText}>&quot;{item.text}&quot;</Text>
+        <Text style={styles.noteDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
       </View>
     </View>
   );
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={colors.accent} /></View>;
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
   }
 
   return (
@@ -82,15 +84,27 @@ export default function NotesScreen() {
       <View style={styles.tabBar}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'notes' && styles.tabActive]}
-          onPress={() => setActiveTab('notes')}>
-          <Ionicons name="create-outline" size={20} color={activeTab === 'notes' ? colors.accent : colors.textDim} />
+          onPress={() => setActiveTab('notes')}
+        >
+          <Ionicons
+            name="create-outline"
+            size={20}
+            color={activeTab === 'notes' ? colors.accent : colors.textDim}
+          />
           <Text style={[styles.tabText, activeTab === 'notes' && styles.tabTextActive]}>Notes</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'highlights' && styles.tabActive]}
-          onPress={() => setActiveTab('highlights')}>
-          <Ionicons name="brush-outline" size={20} color={activeTab === 'highlights' ? colors.accent : colors.textDim} />
-          <Text style={[styles.tabText, activeTab === 'highlights' && styles.tabTextActive]}>Highlights</Text>
+          onPress={() => setActiveTab('highlights')}
+        >
+          <Ionicons
+            name="brush-outline"
+            size={20}
+            color={activeTab === 'highlights' ? colors.accent : colors.textDim}
+          />
+          <Text style={[styles.tabText, activeTab === 'highlights' && styles.tabTextActive]}>
+            Highlights
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -102,7 +116,12 @@ export default function NotesScreen() {
             <Text style={styles.emptyText}>No notes yet</Text>
           </View>
         ) : (
-          <FlatList data={notes} keyExtractor={i => i.id} renderItem={renderNote} contentContainerStyle={styles.list} />
+          <FlatList
+            data={notes}
+            keyExtractor={(i) => i.id}
+            renderItem={renderNote}
+            contentContainerStyle={styles.list}
+          />
         )
       ) : highlights.length === 0 ? (
         <View style={styles.center}>
@@ -110,25 +129,37 @@ export default function NotesScreen() {
           <Text style={styles.emptyText}>No highlights yet</Text>
         </View>
       ) : (
-        <FlatList data={highlights} keyExtractor={i => i.id} renderItem={renderHighlight} contentContainerStyle={styles.list} />
+        <FlatList
+          data={highlights}
+          keyExtractor={(i) => i.id}
+          renderItem={renderHighlight}
+          contentContainerStyle={styles.list}
+        />
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1},
-  center: {flex: 1},
-  tabBar: {flexDirection: 'row', borderBottomWidth: 1},
-  tab: {flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14},
-  tabActive: {borderBottomWidth: 2},
-  tabText: { fontSize: FONT_SIZES.md},
-  tabTextActive: { fontWeight: '600'},
-  list: {padding: 12},
-  card: { borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1},
-  highlightBar: {borderLeftWidth: 3, paddingLeft: 12, marginBottom: 8},
-  highlightText: { fontSize: FONT_SIZES.sm, fontStyle: 'italic'},
-  noteContent: { fontSize: FONT_SIZES.md, marginTop: 4},
-  noteDate: { fontSize: FONT_SIZES.xs, marginTop: 8},
-  emptyText: { fontSize: FONT_SIZES.lg, marginTop: 12},
+  container: { flex: 1 },
+  center: { flex: 1 },
+  tabBar: { flexDirection: 'row', borderBottomWidth: 1 },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+  },
+  tabActive: { borderBottomWidth: 2 },
+  tabText: { fontSize: FONT_SIZES.md },
+  tabTextActive: { fontWeight: '600' },
+  list: { padding: 12 },
+  card: { borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1 },
+  highlightBar: { borderLeftWidth: 3, paddingLeft: 12, marginBottom: 8 },
+  highlightText: { fontSize: FONT_SIZES.sm, fontStyle: 'italic' },
+  noteContent: { fontSize: FONT_SIZES.md, marginTop: 4 },
+  noteDate: { fontSize: FONT_SIZES.xs, marginTop: 8 },
+  emptyText: { fontSize: FONT_SIZES.lg, marginTop: 12 },
 });

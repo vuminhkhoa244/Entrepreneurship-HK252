@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,21 +7,21 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
-} from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../types/navigation";
-import { Ionicons } from "@expo/vector-icons";
-import { LibraryAPI } from "../services/api";
-import type { Book } from "../types";
-import { useTheme } from "../context/ThemeContext";
-import { FONT_SIZES } from "../constants/theme";
+} from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../types/navigation';
+import { Ionicons } from '@expo/vector-icons';
+import { LibraryAPI } from '../services/api';
+import type { Book } from '../types';
+import { useTheme } from '../context/ThemeContext';
+import { FONT_SIZES } from '../constants/theme';
 
 export default function BookDetailScreen() {
-  const route = useRoute<any>();
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { bookId } = route.params as { bookId: string };
+  const route = useRoute<RouteProp<RootStackParamList, 'BookDetail'>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { bookId } = route.params;
 
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +33,7 @@ export default function BookDetailScreen() {
       const { data } = await LibraryAPI.get(bookId);
       setBook(data);
     } catch {
-      Alert.alert("Error", "Failed to load book");
+      Alert.alert('Error', 'Failed to load book');
     } finally {
       setLoading(false);
     }
@@ -44,19 +44,21 @@ export default function BookDetailScreen() {
   }, [fetchBook]);
 
   const openReader = () => {
-    if (!book) return;
-    if (book.file_type === "pdf") {
-      (navigation as any).navigate("PDFReader", { bookId: book.id });
+    if (!book) {
+      return;
+    }
+    if (book.file_type === 'pdf') {
+      navigation.navigate('PDFReader', { bookId: book.id });
     } else {
-      (navigation as any).navigate("Reader", {
+      navigation.navigate('Reader', {
         bookId: book.id,
         fileType: book.file_type,
       });
     }
   };
-  
+
   const openNotes = () => {
-    (navigation as any).navigate("Notes", { bookId } as never);
+    navigation.navigate('Notes', { bookId });
   };
 
   if (loading) {
@@ -67,7 +69,9 @@ export default function BookDetailScreen() {
     );
   }
 
-  if (!book) return null;
+  if (!book) {
+    return null;
+  }
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -76,7 +80,9 @@ export default function BookDetailScreen() {
           <Ionicons name="book" size={80} color={colors.accent} />
         </View>
         <Text style={[styles.title, { color: colors.text }]}>{book.title}</Text>
-        {book.author && <Text style={[styles.author, { color: colors.textDim }]}>by {book.author}</Text>}
+        {book.author && (
+          <Text style={[styles.author, { color: colors.textDim }]}>by {book.author}</Text>
+        )}
 
         {/* Progress bar */}
         <View style={styles.progressContainer}>
@@ -89,33 +95,25 @@ export default function BookDetailScreen() {
             />
           </View>
           <Text style={[styles.progressText, { color: colors.textDim }]}>
-            {book.progress
-              ? `${book.progress.toFixed(1)}% complete`
-              : "Not started"}
+            {book.progress ? `${book.progress.toFixed(1)}% complete` : 'Not started'}
           </Text>
         </View>
 
         {/* Details */}
         <View style={styles.details}>
           <View style={styles.detailItem}>
-            <Ionicons
-              name="document-outline"
-              size={20}
-              color={colors.textDim}
-            />
+            <Ionicons name="document-outline" size={20} color={colors.textDim} />
             <Text style={[styles.detailLabel, { color: colors.textDim }]}>
               {book.file_type.toUpperCase()}
             </Text>
           </View>
-          
+
           {book.total_pages !== undefined && book.total_pages > 0 && (
             <View style={styles.detailItem}>
-              <Ionicons
-                name="layers-outline"
-                size={20}
-                color={colors.textDim}
-              />
-              <Text style={[styles.detailLabel, { color: colors.textDim }]}>{book.total_pages} pages</Text>
+              <Ionicons name="layers-outline" size={20} color={colors.textDim} />
+              <Text style={[styles.detailLabel, { color: colors.textDim }]}>
+                {book.total_pages} pages
+              </Text>
             </View>
           )}
 
@@ -131,55 +129,56 @@ export default function BookDetailScreen() {
 
         {/* Actions */}
         <View style={styles.actions}>
-          <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.accent }]} onPress={openReader}>
+          <TouchableOpacity
+            style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
+            onPress={openReader}
+          >
             <Ionicons name="book-outline" size={24} color={colors.white} />
             <Text style={[styles.primaryBtnText, { color: colors.white }]}>
-              {book.progress && book.progress > 0
-                ? "Continue Reading"
-                : "Start Reading"}
+              {book.progress && book.progress > 0 ? 'Continue Reading' : 'Start Reading'}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.secondaryBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            style={[
+              styles.secondaryBtn,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
             onPress={openNotes}
           >
             <Ionicons name="create-outline" size={24} color={colors.accent} />
-            <Text style={[styles.secondaryBtnText, { color: colors.accent }]}>Notes & Highlights</Text>
+            <Text style={[styles.secondaryBtnText, { color: colors.accent }]}>
+              Notes & Highlights
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.aiBtn,
-              { backgroundColor: colors.accent, borderColor: colors.accent },
-            ]}
+            style={[styles.aiBtn, { backgroundColor: colors.accent, borderColor: colors.accent }]}
             onPress={() => {
-              navigation.navigate("AI", {
+              navigation.navigate('AI', {
                 bookId,
                 fileType: book.file_type,
               });
             }}
           >
             <Ionicons name="sparkles-outline" size={24} color={colors.white} />
-            <Text style={[styles.aiBtnText, { color: colors.white }]}>
-              Ask AI Assistant
-            </Text>
+            <Text style={[styles.aiBtnText, { color: colors.white }]}>Ask AI Assistant</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.dangerBtn}
             onPress={() => {
-              Alert.alert("Delete Book", "This cannot be undone.", [
-                { text: "Cancel", style: "cancel" },
+              Alert.alert('Delete Book', 'This cannot be undone.', [
+                { text: 'Cancel', style: 'cancel' },
                 {
-                  text: "Delete",
-                  style: "destructive",
+                  text: 'Delete',
+                  style: 'destructive',
                   onPress: async () => {
                     try {
                       await LibraryAPI.delete(bookId);
                       navigation.goBack();
                     } catch {
-                      Alert.alert("Error", "Failed to delete book");
+                      Alert.alert('Error', 'Failed to delete book');
                     }
                   },
                 },
@@ -199,63 +198,63 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  coverContainer: { padding: 24, alignItems: "center" },
+  coverContainer: { padding: 24, alignItems: 'center' },
   cover: {
     width: 160,
     height: 220,
     borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 20,
     borderWidth: 2,
   },
   title: {
     fontSize: FONT_SIZES.xl,
-    fontWeight: "bold",
-    textAlign: "center",
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   author: { fontSize: FONT_SIZES.md, marginTop: 8 },
-  progressContainer: { width: "100%", marginVertical: 20 },
+  progressContainer: { width: '100%', marginVertical: 20 },
   progressBg: {
     height: 8,
     borderRadius: 4,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   progressFill: {
-    height: "100%",
+    height: '100%',
     borderRadius: 4,
   },
   progressText: {
     fontSize: FONT_SIZES.sm,
     marginTop: 8,
-    textAlign: "center",
+    textAlign: 'center',
   },
   details: {
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "center",
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'center',
     gap: 24,
     marginVertical: 16,
   },
-  detailItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  detailItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   detailLabel: { fontSize: FONT_SIZES.sm },
-  actions: { width: "100%", marginTop: 16, gap: 12 },
+  actions: { width: '100%', marginTop: 16, gap: 12 },
   primaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     borderRadius: 12,
     paddingVertical: 16,
   },
-  primaryBtnText: { fontSize: FONT_SIZES.md, fontWeight: "600" },
+  primaryBtnText: { fontSize: FONT_SIZES.md, fontWeight: '600' },
   secondaryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     borderRadius: 12,
     paddingVertical: 16,
@@ -263,21 +262,21 @@ const styles = StyleSheet.create({
   },
   secondaryBtnText: {
     fontSize: FONT_SIZES.md,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   aiBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     borderRadius: 12,
     paddingVertical: 16,
   },
-  aiBtnText: { fontSize: FONT_SIZES.md, fontWeight: "600" },
+  aiBtnText: { fontSize: FONT_SIZES.md, fontWeight: '600' },
   dangerBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     paddingVertical: 12,
   },

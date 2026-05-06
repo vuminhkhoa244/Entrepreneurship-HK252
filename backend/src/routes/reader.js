@@ -2,8 +2,8 @@ import express from 'express';
 import { getDb } from '../db/index.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
-import { createReadStream, existsSync, statSync, readFile } from 'fs';
-import { join, dirname, posix, isAbsolute } from 'path';
+import { createReadStream, existsSync, statSync } from 'fs';
+import { join } from 'path';
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -49,7 +49,7 @@ router.get('/:bookId/file', (req, res) => {
         return res.status(416).json({ error: 'Range not satisfiable' });
       }
 
-      const chunkSize = (end - start) + 1;
+      const chunkSize = end - start + 1;
       res.writeHead(206, {
         'Content-Range': `bytes ${start}-${end}/${size}`,
         'Accept-Ranges': 'bytes',
@@ -88,10 +88,17 @@ router.get('/:bookId/asset/*', async (req, res) => {
 
     const ext = assetPath.split('.').pop().toLowerCase();
     const mimeMap = {
-      jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
-      gif: 'image/gif', svg: 'image/svg+xml', webp: 'image/webp',
-      css: 'text/css', woff: 'font/woff', woff2: 'font/woff2',
-      ttf: 'font/ttf', otf: 'font/otf',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+      svg: 'image/svg+xml',
+      webp: 'image/webp',
+      css: 'text/css',
+      woff: 'font/woff',
+      woff2: 'font/woff2',
+      ttf: 'font/ttf',
+      otf: 'font/otf',
     };
     res.setHeader('Content-Type', mimeMap[ext] || 'application/octet-stream');
     res.setHeader('Cache-Control', 'public, max-age=86400');
@@ -152,8 +159,14 @@ router.get('/:bookId/chapter/:chapterIndex', async (req, res) => {
     // Rewrite relative asset paths to our asset endpoint (fix #2)
     const assetPrefix = `/api/reader/${book.id}/asset/`;
     content = content
-      .replace(/(src)=["']([^"']+(?:\.png|\.jpg|\.jpeg|\.gif|\.svg|\.webp))["']/gi, `$1="${assetPrefix}$2"`)
-      .replace(/(url)\(["']?([^"')\s]+\.(?:woff2|woff|ttf|otf))["']?\)/gi, `url("${assetPrefix}$2")`)
+      .replace(
+        /(src)=["']([^"']+(?:\.png|\.jpg|\.jpeg|\.gif|\.svg|\.webp))["']/gi,
+        `$1="${assetPrefix}$2"`
+      )
+      .replace(
+        /(url)\(["']?([^"')\s]+\.(?:woff2|woff|ttf|otf))["']?\)/gi,
+        `url("${assetPrefix}$2")`
+      )
       // Also handle relative paths like ../OEBPS/Images/
       .replace(/(src)=["']\.?\.\//g, `$1="${assetPrefix}`)
       .replace(/(url)\(["']?\.?\.\//g, `url("${assetPrefix}`);
@@ -188,21 +201,33 @@ router.post('/:bookId/progress', (req, res) => {
   }
   const completed = progress >= 100 ? 1 : 0;
 
-  const existing = db.prepare(
-    'SELECT id FROM user_books WHERE user_id = ? AND book_id = ?',
-  ).get(req.user.id, req.params.bookId);
+  const existing = db
+    .prepare('SELECT id FROM user_books WHERE user_id = ? AND book_id = ?')
+    .get(req.user.id, req.params.bookId);
 
   if (existing) {
-    db.prepare(`
+    db.prepare(
+      `
       UPDATE user_books
       SET current_page = ?, current_chapter = ?, progress = ?, completed = ?, last_read_at = CURRENT_TIMESTAMP
       WHERE user_id = ? AND book_id = ?
-    `).run(currentPage, currentChapter, progress, completed, req.user.id, req.params.bookId);
+    `
+    ).run(currentPage, currentChapter, progress, completed, req.user.id, req.params.bookId);
   } else {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO user_books (id, user_id, book_id, current_page, current_chapter, progress, completed, last_read_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `).run(uuidv4(), req.user.id, req.params.bookId, currentPage, currentChapter, progress, completed);
+    `
+    ).run(
+      uuidv4(),
+      req.user.id,
+      req.params.bookId,
+      currentPage,
+      currentChapter,
+      progress,
+      completed
+    );
   }
 
   res.json({ progress, completed: Boolean(completed) });
@@ -213,19 +238,22 @@ router.post('/:bookId/progress', (req, res) => {
 router.post('/:bookId/session/start', (req, res) => {
   const db = getDb();
   const sessionId = uuidv4();
-  db.prepare('INSERT INTO reading_sessions (id, user_id, book_id, started_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)')
-    .run(sessionId, req.user.id, req.params.bookId);
+  db.prepare(
+    'INSERT INTO reading_sessions (id, user_id, book_id, started_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)'
+  ).run(sessionId, req.user.id, req.params.bookId);
   res.json({ sessionId });
 });
 
 router.post('/:bookId/session/end', (req, res) => {
   const db = getDb();
   const { sessionId, pagesRead } = req.body;
-  db.prepare(`
+  db.prepare(
+    `
     UPDATE reading_sessions
     SET ended_at = CURRENT_TIMESTAMP, pages_read = ?, duration_seconds = (julianday('now') - julianday(started_at)) * 86400
     WHERE id = ? AND user_id = ?
-  `).run(pagesRead || 0, sessionId, req.user.id);
+  `
+  ).run(pagesRead || 0, sessionId, req.user.id);
   res.json({ success: true });
 });
 
@@ -236,23 +264,27 @@ router.post('/:bookId/bookmarks', (req, res) => {
   const { chapter, page } = req.body;
   const id = uuidv4();
 
-  db.prepare('INSERT INTO bookmarks (id, user_id, book_id, chapter, page) VALUES (?, ?, ?, ?, ?)')
-    .run(id, req.user.id, req.params.bookId, chapter || 0, page || 0);
+  db.prepare(
+    'INSERT INTO bookmarks (id, user_id, book_id, chapter, page) VALUES (?, ?, ?, ?, ?)'
+  ).run(id, req.user.id, req.params.bookId, chapter || 0, page || 0);
   res.status(201).json({ id, chapter, page });
 });
 
 router.get('/:bookId/bookmarks', (req, res) => {
   const db = getDb();
-  const bookmarks = db.prepare(
-    'SELECT * FROM bookmarks WHERE user_id = ? AND book_id = ? ORDER BY created_at DESC',
-  ).all(req.user.id, req.params.bookId);
+  const bookmarks = db
+    .prepare('SELECT * FROM bookmarks WHERE user_id = ? AND book_id = ? ORDER BY created_at DESC')
+    .all(req.user.id, req.params.bookId);
   res.json(bookmarks);
 });
 
 router.delete('/:bookId/bookmarks/:bookmarkId', (req, res) => {
   const db = getDb();
-  db.prepare('DELETE FROM bookmarks WHERE id = ? AND user_id = ? AND book_id = ?')
-    .run(req.params.bookmarkId, req.user.id, req.params.bookId);
+  db.prepare('DELETE FROM bookmarks WHERE id = ? AND user_id = ? AND book_id = ?').run(
+    req.params.bookmarkId,
+    req.user.id,
+    req.params.bookId
+  );
   res.json({ success: true });
 });
 
@@ -263,23 +295,27 @@ router.post('/:bookId/highlights', (req, res) => {
   const { text, location, page, color } = req.body;
   const id = uuidv4();
 
-  db.prepare('INSERT INTO highlights (id, user_id, book_id, text, location, page, color) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(id, req.user.id, req.params.bookId, text, location, page || 0, color || '#FFD700');
+  db.prepare(
+    'INSERT INTO highlights (id, user_id, book_id, text, location, page, color) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(id, req.user.id, req.params.bookId, text, location, page || 0, color || '#FFD700');
   res.status(201).json({ id, text, color });
 });
 
 router.get('/:bookId/highlights', (req, res) => {
   const db = getDb();
-  const highlights = db.prepare(
-    'SELECT * FROM highlights WHERE user_id = ? AND book_id = ? ORDER BY created_at DESC',
-  ).all(req.user.id, req.params.bookId);
+  const highlights = db
+    .prepare('SELECT * FROM highlights WHERE user_id = ? AND book_id = ? ORDER BY created_at DESC')
+    .all(req.user.id, req.params.bookId);
   res.json(highlights);
 });
 
 router.delete('/:bookId/highlights/:highlightId', (req, res) => {
   const db = getDb();
-  db.prepare('DELETE FROM highlights WHERE id = ? AND user_id = ? AND book_id = ?')
-    .run(req.params.highlightId, req.user.id, req.params.bookId);
+  db.prepare('DELETE FROM highlights WHERE id = ? AND user_id = ? AND book_id = ?').run(
+    req.params.highlightId,
+    req.user.id,
+    req.params.bookId
+  );
   res.json({ success: true });
 });
 
@@ -290,35 +326,44 @@ router.post('/:bookId/notes', (req, res) => {
   const { content, highlightId, page } = req.body;
   const id = uuidv4();
 
-  db.prepare('INSERT INTO notes (id, user_id, book_id, content, highlight_id, page) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(id, req.user.id, req.params.bookId, content, highlightId || null, page || 0);
+  db.prepare(
+    'INSERT INTO notes (id, user_id, book_id, content, highlight_id, page) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(id, req.user.id, req.params.bookId, content, highlightId || null, page || 0);
   res.status(201).json({ id, content });
 });
 
 router.get('/:bookId/notes', (req, res) => {
   const db = getDb();
-  const notes = db.prepare(`
+  const notes = db
+    .prepare(
+      `
     SELECT n.*, h.text as highlighted_text, h.color
     FROM notes n
     LEFT JOIN highlights h ON n.highlight_id = h.id
     WHERE n.user_id = ? AND n.book_id = ?
     ORDER BY n.created_at DESC
-  `).all(req.user.id, req.params.bookId);
+  `
+    )
+    .all(req.user.id, req.params.bookId);
   res.json(notes);
 });
 
 router.patch('/:bookId/notes/:noteId', (req, res) => {
   const db = getDb();
   const { content } = req.body;
-  db.prepare('UPDATE notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ? AND book_id = ?')
-    .run(content, req.params.noteId, req.user.id, req.params.bookId);
+  db.prepare(
+    'UPDATE notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ? AND book_id = ?'
+  ).run(content, req.params.noteId, req.user.id, req.params.bookId);
   res.json({ success: true });
 });
 
 router.delete('/:bookId/notes/:noteId', (req, res) => {
   const db = getDb();
-  db.prepare('DELETE FROM notes WHERE id = ? AND user_id = ? AND book_id = ?')
-    .run(req.params.noteId, req.user.id, req.params.bookId);
+  db.prepare('DELETE FROM notes WHERE id = ? AND user_id = ? AND book_id = ?').run(
+    req.params.noteId,
+    req.user.id,
+    req.params.bookId
+  );
   res.json({ success: true });
 });
 
@@ -326,9 +371,11 @@ router.delete('/:bookId/notes/:noteId', (req, res) => {
 
 router.get('/:bookId/sessions', (req, res) => {
   const db = getDb();
-  const sessions = db.prepare(
-    'SELECT * FROM reading_sessions WHERE user_id = ? AND book_id = ? ORDER BY started_at DESC LIMIT 50',
-  ).all(req.user.id, req.params.bookId);
+  const sessions = db
+    .prepare(
+      'SELECT * FROM reading_sessions WHERE user_id = ? AND book_id = ? ORDER BY started_at DESC LIMIT 50'
+    )
+    .all(req.user.id, req.params.bookId);
   res.json(sessions);
 });
 

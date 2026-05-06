@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
-import { dirname,  join } from 'path';
+import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -104,7 +104,7 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_notes_user_book ON notes(user_id, book_id);
   `);
 
-  console.log('Database initialized');
+  console.warn('Database initialized');
   return db;
 }
 

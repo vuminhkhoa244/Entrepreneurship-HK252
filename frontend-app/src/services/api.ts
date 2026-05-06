@@ -1,14 +1,10 @@
 import axios from 'axios';
 import { getToken } from './auth';
 import { BASE_URL } from '../constants/config';
-import type { Book, Highlight, Note, ReadingSession, Bookmark } from '../types';
+import type { Book, Highlight, Note, Bookmark } from '../types';
 
-const client = axios.create({ baseURL: BASE_URL });
-
-async function authHeaders(): Promise<Record<string, string>> {
-  const token = await getToken();
-  return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-}
+// Client for authenticated requests (includes auth token)
+export const client = axios.create({ baseURL: BASE_URL });
 
 client.interceptors.request.use(async (config) => {
   const token = await getToken();
@@ -19,9 +15,30 @@ client.interceptors.request.use(async (config) => {
   return config;
 });
 
-export default client;
+// Client for public requests (no auth token) - used for login/register
+export const publicClient = axios.create({ baseURL: BASE_URL });
 
-// ── Library ──────────────────────────────────────────────────────
+publicClient.interceptors.request.use(async (config) => {
+  config.headers['Content-Type'] = 'application/json';
+  return config;
+});
+
+// Raw axios for multipart uploads (needs special handling)
+export const uploadClient = axios;
+
+export const AuthAPI = {
+  login: (email: string, password: string) =>
+    publicClient.post<{ token: string; user: import('../types').User }>('/auth/login', {
+      email,
+      password,
+    }),
+  register: (email: string, password: string, displayName?: string) =>
+    publicClient.post<{ token: string; user: import('../types').User }>('/auth/register', {
+      email,
+      password,
+      displayName,
+    }),
+};
 
 export const LibraryAPI = {
   list: () => client.get<Book[]>('/library'),
@@ -36,12 +53,12 @@ export const LibraryAPI = {
 export const ReaderAPI = {
   chapter: (bookId: string, index: number) =>
     client.get<{ chapterIndex: number; title: string; content: string }>(
-      `/reader/${bookId}/chapter/${index}`,
+      `/reader/${bookId}/chapter/${index}`
     ),
 
   contents: (bookId: string) =>
-    client.get<{ chapters: any[]; totalChapters: number } | { totalPages: number }>(
-      `/reader/${bookId}/contents`,
+    client.get<{ chapters: unknown[]; totalChapters: number } | { totalPages: number }>(
+      `/reader/${bookId}/contents`
     ),
 
   setProgress: (
@@ -49,7 +66,7 @@ export const ReaderAPI = {
     currentPage: number,
     currentChapter: number,
     totalPages?: number,
-    totalChapters?: number,
+    totalChapters?: number
   ) =>
     client.post(`/reader/${bookId}/progress`, {
       currentPage,
@@ -66,7 +83,7 @@ export const ReaderAPI = {
       sessionId,
       pagesRead,
     }),
-  };
+};
 
 // ── Bookmarks ───────────────────────────────────────────────────────
 
@@ -91,8 +108,10 @@ export const NoteAPI = {
 
 export const HighlightAPI = {
   list: (bookId: string) => client.get<Highlight[]>(`/highlights/${bookId}`),
-  create: (bookId: string, data: { text: string; location?: string; page?: number; color?: string }) =>
-    client.post<Highlight>(`/highlights/${bookId}`, data),
+  create: (
+    bookId: string,
+    data: { text: string; location?: string; page?: number; color?: string }
+  ) => client.post<Highlight>(`/highlights/${bookId}`, data),
   delete: (highlightId: string) => client.delete(`/highlights/${highlightId}`),
 };
 
@@ -116,5 +135,3 @@ export const AIAPI = {
   askQuestion: (bookId: string, question: string, context?: string) =>
     client.post<{ answer: string }>(`/ai/${bookId}/ask`, { question, context }),
 };
-
-

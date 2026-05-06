@@ -16,7 +16,7 @@ dotenv.config();
 
 // Validate critical environment variables
 const requiredEnvs = ['JWT_SECRET'];
-requiredEnvs.forEach(env => {
+requiredEnvs.forEach((env) => {
   if (!process.env[env]) {
     console.error(`FATAL: Environment variable ${env} is not set`);
     process.exit(1);
@@ -45,35 +45,42 @@ app.use(securityHeaders);
 app.use(requestLogging);
 
 // CORS - restrict to allowed origins in production
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:8081').split(',');
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl requests)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      logger.warn('CORS request blocked', { origin });
-      callback(new Error('CORS not allowed'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+const allowedOrigins = (
+  process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:8081'
+).split(',');
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl requests)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        logger.warn('CORS request blocked', { origin });
+        callback(new Error('CORS not allowed'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 // Body parser with size limits
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
 // Serve uploaded files (with cache headers)
-app.use('/uploads', express.static(resolve(__dirname, '..', 'uploads'), {
-  maxAge: '1h',
-  etag: false
-}));
+app.use(
+  '/uploads',
+  express.static(resolve(__dirname, '..', 'uploads'), {
+    maxAge: '1h',
+    etag: false,
+  })
+);
 
 // API rate limiting
 app.use('/api/', apiLimiter);
@@ -111,13 +118,13 @@ app.use((err, _req, res, _next) => {
   logger.error('Unhandled error', {
     message: err.message,
     statusCode,
-    ...(isDev && { stack: err.stack })
+    ...(isDev && { stack: err.stack }),
   });
 
   // Don't expose stack traces in production
   const response = {
     error: isDev ? err.message : 'An error occurred',
-    ...(isDev && { stack: err.stack })
+    ...(isDev && { stack: err.stack }),
   };
 
   res.status(statusCode).json(response);
@@ -128,11 +135,11 @@ app.use((err, _req, res, _next) => {
 async function start() {
   try {
     getDb(); // Initialize database
-    
+
     app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`, {
         nodeEnv: process.env.NODE_ENV,
-        allowedOrigins: allowedOrigins.join(', ')
+        allowedOrigins: allowedOrigins.join(', '),
       });
     });
   } catch (err) {
@@ -148,4 +155,3 @@ process.on('SIGINT', () => {
   logger.info('Shutting down gracefully...');
   process.exit(0);
 });
-

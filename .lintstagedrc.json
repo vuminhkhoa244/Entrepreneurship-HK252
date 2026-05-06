@@ -1,0 +1,6 @@
+{
+  "backend/**/*.js": ["npx eslint --fix", "npx prettier --write"],
+  "frontend-app/**/*.{ts,tsx}": ["npx eslint --fix", "npx prettier --write"],
+  "**/*.json": ["npx prettier --write"],
+  "**/*.md": ["npx prettier --write"]
+}
