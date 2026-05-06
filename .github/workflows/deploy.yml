@@ -109,13 +109,11 @@ jobs:
       - name: Build Expo app
         working-directory: frontend-app
         run: |
-          # Build for Android
-          eas build --platform android --non-interactive || echo "Android build failed"
-          
-          # Build for iOS (requires Apple Developer account)
-          # eas build --platform ios --non-interactive || echo "iOS build failed"
+          # Thêm --profile production để tránh việc bị hỏi (interactive)
+          eas build --platform android --profile production --non-interactive
         env:
-          EAS_TOKEN: ${{ secrets.EAS_TOKEN }}
+          # Đổi từ EAS_TOKEN thành EXPO_TOKEN để đúng chuẩn của Expo
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         continue-on-error: true
       
       # Example: Submit to stores (uncomment and configure)
