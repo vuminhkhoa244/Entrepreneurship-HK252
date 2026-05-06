@@ -14,6 +14,7 @@ router.use(aiLimiter);
 
 const MAX_TEXT_LENGTH = 15000;
 const MAX_QUESTION_LENGTH = 1000;
+const { basename } = require('path');
 
 // ─── AI Utilities ────────────────────────────────────────────────────
 
@@ -28,7 +29,8 @@ async function getChapterContent(bookId, chapterIndex, userId) {
     throw new Error('Book not found or not an EPUB');
   }
 
-  const epub = new Epub(join(process.cwd(), book.file_url));
+  const filename = basename(book.file_url);
+  const epub = new Epub(join(process.env.UPLOAD_DIR || './uploads', filename));
   await epub.parse();
 
   const chapters = epub.flow;

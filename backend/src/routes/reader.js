@@ -3,7 +3,7 @@ import { getDb } from '../db/index.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
 import { createReadStream, existsSync, statSync } from 'fs';
-import { join } from 'path';
+import { join, basename } from 'path';
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -25,7 +25,8 @@ router.get('/:bookId/file', (req, res) => {
     return res.status(404).json({ error: 'Book not found' });
   }
 
-  const filePath = join(process.cwd(), book.file_url);
+  const filename = basename(book.file_url);
+  const filePath = join(process.env.UPLOAD_DIR || './uploads', filename);
   if (!existsSync(filePath)) {
     return res.status(404).json({ error: 'File not found' });
   }
@@ -78,7 +79,8 @@ router.get('/:bookId/asset/*', async (req, res) => {
 
     const assetPath = decodeURIComponent(req.params[0]);
     const { Epub } = await import('epub2');
-    const epub = new Epub(join(process.cwd(), book.file_url));
+    const filename = basename(book.file_url);
+    const epub = new Epub(join(process.env.UPLOAD_DIR || './uploads', filename));
 
     // epub2 can serve internal assets
     const asset = await epub.getAsset(assetPath);
@@ -119,7 +121,8 @@ router.get('/:bookId/contents', async (req, res) => {
 
     if (book.file_type === 'epub') {
       const { Epub } = await import('epub2');
-      const epub = new Epub(join(process.cwd(), book.file_url));
+      const filename = basename(book.file_url);
+      const epub = new Epub(join(process.env.UPLOAD_DIR || './uploads', filename));
       await epub.parse();
       const chapters = (epub.flow || []).map((ch, i) => ({
         id: ch.id,
@@ -146,7 +149,8 @@ router.get('/:bookId/chapter/:chapterIndex', async (req, res) => {
     }
 
     const { Epub } = await import('epub2');
-    const epub = new Epub(join(process.cwd(), book.file_url));
+    const filename = basename(book.file_url);
+    const epub = new Epub(join(process.env.UPLOAD_DIR || './uploads', filename));
     const index = parseInt(req.params.chapterIndex);
 
     const chapters = epub.flow;
