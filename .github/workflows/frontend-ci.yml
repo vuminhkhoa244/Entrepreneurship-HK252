@@ -1,0 +1,89 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'frontend-app/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'frontend-app/**'
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: frontend-app/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: frontend-app
+        run: npm ci
+      
+      - name: Check TypeScript
+        working-directory: frontend-app
+        run: npx tsc --noEmit
+        continue-on-error: true
+      
+      - name: Run linter
+        working-directory: frontend-app
+        run: npm run lint --if-present
+        continue-on-error: true
+      
+      - name: Check code formatting
+        working-directory: frontend-app
+        run: npm run format:check --if-present
+        continue-on-error: true
+      
+      - name: Run tests
+        working-directory: frontend-app
+        run: npm test --if-present
+        continue-on-error: true
+      
+      - name: Check for security vulnerabilities
+        working-directory: frontend-app
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+  expo-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: frontend-app/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: frontend-app
+        run: npm ci
+      
+      - name: Setup EAS
+        run: npm install -g eas-cli
+      
+      - name: Check Expo config
+        working-directory: frontend-app
+        run: npx expo-doctor --fix-dependencies || true
+        continue-on-error: true
+      
+      - name: Validate app.json
+        working-directory: frontend-app
+        run: npx expo config
+        continue-on-error: true

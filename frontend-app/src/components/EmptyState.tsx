@@ -1,9 +1,8 @@
 import React from 'react';
-import {View, Text, StyleSheet, ViewStyle} from 'react-native';
-import {Ionicons} from '@expo/vector-icons';
-import { FONT_SIZES } from "../constants/theme";
-import { useTheme } from "../context/ThemeContext";
-
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { FONT_SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface EmptyStateProps {
   icon: React.ComponentProps<typeof Ionicons>['name'];
@@ -14,16 +13,23 @@ interface EmptyStateProps {
   style?: ViewStyle;
 }
 
-export default function EmptyState({icon, title, subtitle, actionLabel, onAction, style}: EmptyStateProps) {
+export default function EmptyState({
+  icon,
+  title,
+  subtitle,
+  actionLabel,
+  onAction,
+  style,
+}: EmptyStateProps) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.container, {backgroundColor: colors.background}, style]}>
+    <View style={[styles.container, { backgroundColor: colors.background }, style]}>
       <Ionicons name={icon} size={64} color={colors.textMuted} />
-      <Text style={[styles.title, {color: colors.text}]}>{title}</Text>
-      {subtitle && <Text style={[styles.subtitle, {color: colors.textDim}]}>{subtitle}</Text>}
+      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+      {subtitle && <Text style={[styles.subtitle, { color: colors.textDim }]}>{subtitle}</Text>}
       {actionLabel && onAction && (
-        <View style={[styles.actionBtn, {backgroundColor: colors.accent}]}>
-          <Text style={[styles.actionText, {color: colors.white}]}>{actionLabel}</Text>
+        <View style={[styles.actionBtn, { backgroundColor: colors.accent }]}>
+          <Text style={[styles.actionText, { color: colors.white }]}>{actionLabel}</Text>
         </View>
       )}
     </View>
@@ -31,7 +37,7 @@ export default function EmptyState({icon, title, subtitle, actionLabel, onAction
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24},
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   title: { fontSize: FONT_SIZES.lg, marginTop: 16, textAlign: 'center' },
   subtitle: { fontSize: FONT_SIZES.md, marginTop: 8, textAlign: 'center' },
   actionBtn: {
@@ -40,5 +46,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 20,
   },
-  actionText: { fontSize: FONT_SIZES.md, fontWeight: '600'},
+  actionText: { fontSize: FONT_SIZES.md, fontWeight: '600' },
 });

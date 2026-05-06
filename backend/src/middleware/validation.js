@@ -12,7 +12,7 @@ export function validatePassword(password) {
   const minLength = parseInt(process.env.PASSWORD_MIN_LENGTH || 8);
   // Require: min length, at least one number, one uppercase, one lowercase
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[\w\W]{8,}$/;
-  
+
   if (password.length < minLength) {
     return { valid: false, error: `Password must be at least ${minLength} characters` };
   }
@@ -63,7 +63,7 @@ export function validateBody(schema) {
     for (const [field, validator] of Object.entries(schema)) {
       const value = req.body[field];
       const result = validator(value);
-      
+
       if (result === false) {
         errors[field] = `Invalid ${field}`;
       } else if (result.valid === false) {
@@ -88,12 +88,12 @@ export function sanitizeForLogging(obj) {
   }
   const sanitized = { ...obj };
   const sensitiveFields = ['password', 'password_hash', 'token', 'api_key'];
-  
-  sensitiveFields.forEach(field => {
+
+  sensitiveFields.forEach((field) => {
     if (field in sanitized) {
       sanitized[field] = '[REDACTED]';
     }
   });
-  
+
   return sanitized;
 }

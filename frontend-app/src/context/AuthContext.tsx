@@ -1,11 +1,10 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext } from 'react';
 
 export interface AuthUser {
-  id?: string;
-  email?: string;
-  name?: string;
-  token?: string;
-  [key: string]: any;
+  id: string;
+  email: string;
+  displayName: string;
+  [key: string]: unknown;
 }
 
 export interface AuthContextType {

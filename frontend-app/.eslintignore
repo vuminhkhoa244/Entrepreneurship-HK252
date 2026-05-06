@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+.env
+.env.local
+.env.*.local
+android
+ios
+.expo
+.gradle
+*.log
+.DS_Store
+.idea
+.vscode
+coverage
+dist
+build

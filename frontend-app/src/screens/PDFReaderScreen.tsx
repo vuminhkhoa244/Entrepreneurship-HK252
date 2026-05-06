@@ -8,24 +8,23 @@ import {
   Alert,
   Modal,
   ScrollView,
-} from "react-native";
-import Pdf from "react-native-pdf";
-import { useRoute, useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { RootStackParamList } from "../types/navigation";
-import { Ionicons } from "@expo/vector-icons";
-import { ReaderAPI, LibraryAPI, AIAPI } from "../services/api";
-import { BASE_URL } from "../constants/config";
-import { getToken } from "../services/auth";
-import { FONT_SIZES } from "../constants/theme";
-import { useTheme } from "../context/ThemeContext";
-import { RouteProp } from "@react-navigation/native";
+} from 'react-native';
+import Pdf from 'react-native-pdf';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../types/navigation';
+import { Ionicons } from '@expo/vector-icons';
+import { ReaderAPI, LibraryAPI } from '../services/api';
+import { BASE_URL } from '../constants/config';
+import { getToken } from '../services/auth';
+import { FONT_SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
+import { RouteProp } from '@react-navigation/native';
 
 export default function PDFReaderScreen() {
-  type PDFReaderRouteProp = RouteProp<RootStackParamList, "PDFReader">;
+  type PDFReaderRouteProp = RouteProp<RootStackParamList, 'PDFReader'>;
   const route = useRoute<PDFReaderRouteProp>();
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { bookId } = route.params;
 
   const [loading, setLoading] = useState(true);
@@ -61,11 +60,7 @@ export default function PDFReaderScreen() {
 
   const loadReaderData = useCallback(async () => {
     try {
-      const [token, bookRes] =
-        await Promise.all([
-          getToken(),
-          LibraryAPI.get(bookId),
-        ]);
+      const [token, bookRes] = await Promise.all([getToken(), LibraryAPI.get(bookId)]);
 
       const initialPage = Math.max(1, bookRes.data?.current_page || 1);
       pageRef.current = initialPage;
@@ -80,7 +75,7 @@ export default function PDFReaderScreen() {
         setTotalPages(book.total_pages || 0);
       }
     } catch {
-      Alert.alert("Error", "Failed to load PDF reader data");
+      Alert.alert('Error', 'Failed to load PDF reader data');
     }
   }, [bookId]);
 
@@ -108,38 +103,34 @@ export default function PDFReaderScreen() {
     const unsubscribe = navigation.addListener('beforeRemove', () => {
       const page = pageRef.current;
       if (totalPages > 0 && page > 0) {
-        ReaderAPI.setProgress(
-          bookId,
-          page,
-          page,
-          totalPages,
-          undefined,
-        ).catch(() => {});
+        ReaderAPI.setProgress(bookId, page, page, totalPages, undefined).catch(() => {});
       }
     });
     return unsubscribe;
   }, [bookId, navigation, totalPages]);
 
   useEffect(() => {
-    if (!pdfReady || totalPages <= 0 || currentPage <= 0) return;
+    if (!pdfReady || totalPages <= 0 || currentPage <= 0) {
+      return;
+    }
 
     const timeout = setTimeout(() => {
-      ReaderAPI.setProgress(
-        bookId,
-        currentPage,
-        currentPage,
-        totalPages,
-        undefined,
-      ).catch(() => {});
+      ReaderAPI.setProgress(bookId, currentPage, currentPage, totalPages, undefined).catch(
+        () => {}
+      );
     }, 350);
 
     return () => clearTimeout(timeout);
   }, [bookId, currentPage, totalPages, pdfReady]);
 
   const jumpToPage = (page: number) => {
-    if (totalPages <= 0) return;
+    if (totalPages <= 0) {
+      return;
+    }
     const next = Math.min(Math.max(page, 1), totalPages);
-    if (next === pageRef.current) return;
+    if (next === pageRef.current) {
+      return;
+    }
     pageRef.current = next;
     setCurrentPage(next);
     setForcedPage(next);
@@ -154,16 +145,14 @@ export default function PDFReaderScreen() {
             cache: true,
           }
         : null,
-    [pdfUri, authToken],
+    [pdfUri, authToken]
   );
 
   if (!source) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.accent} />
-        <Text style={[styles.loadingText, { color: colors.textDim }]}>
-          Loading PDF...
-        </Text>
+        <Text style={[styles.loadingText, { color: colors.textDim }]}>Loading PDF...</Text>
       </View>
     );
   }
@@ -182,9 +171,7 @@ export default function PDFReaderScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Reading PDF
-        </Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Reading PDF</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={() => setShowAIOptions(true)}>
             <Ionicons name="sparkles-outline" size={22} color={colors.accent} />
@@ -207,21 +194,13 @@ export default function PDFReaderScreen() {
         >
           <Text style={[styles.toolLabel, { color: colors.text }]}>Zoom</Text>
           <View style={styles.zoomRow}>
-            <TouchableOpacity
-              onPress={() =>
-                setScale((s) => Math.max(0.8, +(s - 0.1).toFixed(1)))
-              }
-            >
+            <TouchableOpacity onPress={() => setScale((s) => Math.max(0.8, +(s - 0.1).toFixed(1)))}>
               <Ionicons name="remove" size={24} color={colors.accent} />
             </TouchableOpacity>
             <Text style={[styles.zoomText, { color: colors.text }]}>
               {Math.round(scale * 100)}%
             </Text>
-            <TouchableOpacity
-              onPress={() =>
-                setScale((s) => Math.min(3, +(s + 0.1).toFixed(1)))
-              }
-            >
+            <TouchableOpacity onPress={() => setScale((s) => Math.min(3, +(s + 0.1).toFixed(1)))}>
               <Ionicons name="add" size={24} color={colors.accent} />
             </TouchableOpacity>
           </View>
@@ -267,26 +246,18 @@ export default function PDFReaderScreen() {
       {loading && (
         <View style={styles.loader}>
           <ActivityIndicator size="large" color={colors.accent} />
-          <Text style={[styles.loadingText, { color: colors.textDim }]}>
-            Rendering PDF...
-          </Text>
+          <Text style={[styles.loadingText, { color: colors.textDim }]}>Rendering PDF...</Text>
         </View>
       )}
 
       {/* AI Options Modal */}
       <Modal visible={showAIOptions} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View
-            style={[styles.modalContent, { backgroundColor: colors.surface }]}
-          >
-            <View
-              style={[styles.modalHeader, { borderBottomColor: colors.border }]}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="sparkles" size={24} color={colors.accent} />
-                <Text style={[styles.modalTitle, { color: colors.text }]}>
-                  AI Assistant
-                </Text>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>AI Assistant</Text>
               </View>
               <TouchableOpacity onPress={() => setShowAIOptions(false)}>
                 <Ionicons name="close" size={24} color={colors.text} />
@@ -301,19 +272,17 @@ export default function PDFReaderScreen() {
                 ]}
                 onPress={() => {
                   setShowAIOptions(false);
-                  navigation.navigate("AI", {
+                  navigation.navigate('AI', {
                     bookId,
-                    fileType: "pdf",
+                    fileType: 'pdf',
                   });
                 }}
               >
-                <View style={[styles.optionIcon, { backgroundColor: colors.accent + "20" }]}>
+                <View style={[styles.optionIcon, { backgroundColor: colors.accent + '20' }]}>
                   <Ionicons name="chatbubble-outline" size={24} color={colors.accent} />
                 </View>
                 <View style={styles.optionContent}>
-                  <Text style={[styles.optionTitle, { color: colors.text }]}>
-                    Ask AI Assistant
-                  </Text>
+                  <Text style={[styles.optionTitle, { color: colors.text }]}>Ask AI Assistant</Text>
                   <Text style={[styles.optionDesc, { color: colors.textDim }]}>
                     Ask questions about this PDF
                   </Text>
@@ -331,10 +300,7 @@ export default function PDFReaderScreen() {
           { backgroundColor: colors.surface, borderTopColor: colors.border },
         ]}
       >
-        <TouchableOpacity
-          onPress={() => jumpToPage(currentPage - 1)}
-          disabled={currentPage <= 1}
-        >
+        <TouchableOpacity onPress={() => jumpToPage(currentPage - 1)} disabled={currentPage <= 1}>
           <Ionicons
             name="chevron-back"
             size={28}
@@ -343,7 +309,7 @@ export default function PDFReaderScreen() {
         </TouchableOpacity>
 
         <Text style={[styles.pageInfo, { color: colors.text }]}>
-          Page {currentPage} / {totalPages || "-"}
+          Page {currentPage} / {totalPages || '-'}
         </Text>
 
         <TouchableOpacity
@@ -353,11 +319,7 @@ export default function PDFReaderScreen() {
           <Ionicons
             name="chevron-forward"
             size={28}
-            color={
-              totalPages > 0 && currentPage >= totalPages
-                ? colors.textMuted
-                : colors.accent
-            }
+            color={totalPages > 0 && currentPage >= totalPages ? colors.textMuted : colors.accent}
           />
         </TouchableOpacity>
       </View>
@@ -367,39 +329,39 @@ export default function PDFReaderScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  pdf: { flex: 1, width: "100%" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  pdf: { flex: 1, width: '100%' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: FONT_SIZES.md, fontWeight: "600" },
-  headerActions: { flexDirection: "row" },
+  headerTitle: { fontSize: FONT_SIZES.md, fontWeight: '600' },
+  headerActions: { flexDirection: 'row' },
   tools: { padding: 12, borderBottomWidth: 1 },
   toolLabel: { fontSize: FONT_SIZES.sm, marginBottom: 8 },
   zoomRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 16,
   },
   zoomText: { fontSize: FONT_SIZES.md },
   loader: {
-    position: "absolute",
-    top: "50%",
+    position: 'absolute',
+    top: '50%',
     left: 0,
     right: 0,
-    alignItems: "center",
+    alignItems: 'center',
   },
   loadingText: { fontSize: FONT_SIZES.md, marginTop: 12 },
   bottomBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderTopWidth: 1,
@@ -407,25 +369,25 @@ const styles = StyleSheet.create({
   pageInfo: { fontSize: FONT_SIZES.sm },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    height: "70%",
+    height: '70%',
   },
   modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
   },
-  modalTitle: { fontSize: FONT_SIZES.lg, fontWeight: "600" },
+  modalTitle: { fontSize: FONT_SIZES.lg, fontWeight: '600' },
   optionsList: { flex: 1, padding: 16 },
   optionItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -436,10 +398,10 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   optionContent: { flex: 1 },
-  optionTitle: { fontSize: FONT_SIZES.md, fontWeight: "600", marginBottom: 4 },
+  optionTitle: { fontSize: FONT_SIZES.md, fontWeight: '600', marginBottom: 4 },
   optionDesc: { fontSize: FONT_SIZES.sm },
 });

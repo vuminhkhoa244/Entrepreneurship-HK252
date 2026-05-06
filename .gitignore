@@ -89,4 +89,13 @@ temp/
 *.pem
 *.key
 *.crt
-*.kilo
+.husky/_
+.env.production
+
+# ========================
+# CI/CD
+# ========================
+.turbo/
+.next/
+dist/
+build/

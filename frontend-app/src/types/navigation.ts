@@ -4,11 +4,11 @@ export type RootStackParamList = {
   Main: undefined;
   Login: undefined;
   Register: undefined;
-  BookDetail: {bookId: string};
-  Reader: {bookId: string; fileType: 'epub' | 'pdf'};
-  PDFReader: {bookId: string};
-  Notes: {bookId: string};
-  AI: {bookId: string; fileType: 'epub' | 'pdf'; chapterIndex?: number; page?: number};
+  BookDetail: { bookId: string };
+  Reader: { bookId: string; fileType: 'epub' | 'pdf' };
+  PDFReader: { bookId: string };
+  Notes: { bookId: string };
+  AI: { bookId: string; fileType: 'epub' | 'pdf'; chapterIndex?: number; page?: number };
 };
 
 export type MainTabParamList = {

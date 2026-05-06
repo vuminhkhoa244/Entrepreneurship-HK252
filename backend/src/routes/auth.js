@@ -6,6 +6,7 @@ import { getDb } from '../db/index.js';
 import { validateEmail, validatePassword, validateDisplayName } from '../middleware/validation.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
 import { logger } from '../middleware/logging.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 const SALT_ROUNDS = 10;
@@ -17,7 +18,7 @@ const SALT_ROUNDS = 10;
 router.post('/register', authLimiter, async (req, res) => {
   try {
     const { email, password, displayName } = req.body;
-    
+
     // Validate inputs
     if (!email || !password) {
       logger.warn('Registration attempt with missing fields', { email: email || 'missing' });
@@ -49,21 +50,20 @@ router.post('/register', authLimiter, async (req, res) => {
     const id = uuidv4();
     const cleanDisplayName = (displayName || email.split('@')[0]).substring(0, 100);
 
-    db.prepare('INSERT INTO users (id, email, password_hash, display_name) VALUES (?, ?, ?, ?)')
-      .run(id, email, hash, cleanDisplayName);
+    db.prepare(
+      'INSERT INTO users (id, email, password_hash, display_name) VALUES (?, ?, ?, ?)'
+    ).run(id, email, hash, cleanDisplayName);
 
-    const token = jwt.sign(
-      { id, email },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
-    );
+    const token = jwt.sign({ id, email }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+    });
 
     logger.info('User registered successfully', { userId: id });
 
     res.status(201).json({
       token,
       refreshToken: generateRefreshToken(id),
-      user: { id, email, displayName: cleanDisplayName }
+      user: { id, email, displayName: cleanDisplayName },
     });
   } catch (err) {
     logger.error('Registration error', { error: err.message });
@@ -78,7 +78,7 @@ router.post('/register', authLimiter, async (req, res) => {
 router.post('/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       logger.warn('Login attempt with missing fields', { email: email || 'missing' });
       return res.status(400).json({ error: 'Email and password required' });
@@ -89,8 +89,10 @@ router.post('/login', authLimiter, async (req, res) => {
     }
 
     const db = getDb();
-    const user = db.prepare('SELECT id, email, password_hash, display_name FROM users WHERE email = ?').get(email);
-    
+    const user = db
+      .prepare('SELECT id, email, password_hash, display_name FROM users WHERE email = ?')
+      .get(email);
+
     if (!user) {
       logger.warn('Login attempt for non-existent user', { email });
       // Generic message to prevent user enumeration
@@ -103,18 +105,16 @@ router.post('/login', authLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
-    );
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+    });
 
     logger.info('User logged in successfully', { userId: user.id });
 
     res.json({
       token,
       refreshToken: generateRefreshToken(user.id),
-      user: { id: user.id, email: user.email, displayName: user.display_name }
+      user: { id: user.id, email: user.email, displayName: user.display_name },
     });
   } catch (err) {
     logger.error('Login error', { error: err.message });
@@ -133,19 +133,20 @@ router.post('/refresh', async (req, res) => {
       return res.status(400).json({ error: 'Refresh token required' });
     }
 
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET
+    );
     const db = getDb();
     const user = db.prepare('SELECT id, email FROM users WHERE id = ?').get(decoded.id);
-    
+
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    const newToken = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
-    );
+    const newToken = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+    });
 
     res.json({ token: newToken });
   } catch (err) {
@@ -158,11 +159,15 @@ router.post('/refresh', async (req, res) => {
  * Helper function to generate refresh token
  */
 function generateRefreshToken(userId) {
-  return jwt.sign(
-    { id: userId },
-    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' }
-  );
+  return jwt.sign({ id: userId }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+  });
 }
 
-export default router;
+/**
+ * Get current user
+ * GET /api/auth/me
+ */
+router.get('/me', authMiddleware, (req, res) => {
+  res.json({ user: req.user });
+});

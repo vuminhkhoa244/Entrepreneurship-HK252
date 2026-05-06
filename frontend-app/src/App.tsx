@@ -1,31 +1,31 @@
-import React, { useEffect, useState } from "react";
-import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { isAuthenticated } from "./services/auth";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import React, { useEffect, useState } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { isAuthenticated, getUser } from './services/auth';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import LoginScreen from "./screens/LoginScreen";
-import RegisterScreen from "./screens/RegisterScreen";
-import LibraryScreen from "./screens/LibraryScreen";
-import BookDetailScreen from "./screens/BookDetailScreen";
-import ReaderScreen from "./screens/ReaderScreen";
-import PDFReaderScreen from "./screens/PDFReaderScreen";
-import NotesScreen from "./screens/NotesScreen";
-import StatsScreen from "./screens/StatsScreen";
-import SettingsScreen from "./screens/SettingsScreen";
-import AIScreen from "./screens/AIScreen";
+import LoginScreen from './screens/LoginScreen';
+import RegisterScreen from './screens/RegisterScreen';
+import LibraryScreen from './screens/LibraryScreen';
+import BookDetailScreen from './screens/BookDetailScreen';
+import ReaderScreen from './screens/ReaderScreen';
+import PDFReaderScreen from './screens/PDFReaderScreen';
+import NotesScreen from './screens/NotesScreen';
+import StatsScreen from './screens/StatsScreen';
+import SettingsScreen from './screens/SettingsScreen';
+import AIScreen from './screens/AIScreen';
 
-import { useTheme, ThemeProvider } from "./context/ThemeContext";
-import { Ionicons } from "@expo/vector-icons";
+import { useTheme, ThemeProvider } from './context/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
 
-export type { RootStackParamList, MainTabParamList } from "./types/navigation";
-export { AuthContext } from "./context/AuthContext";
-export type { AuthUser, AuthContextType } from "./context/AuthContext";
+export type { RootStackParamList, MainTabParamList } from './types/navigation';
+export { AuthContext } from './context/AuthContext';
+export type { AuthUser, AuthContextType } from './context/AuthContext';
 
-import { RootStackParamList, MainTabParamList } from "./types/navigation";
-import { AuthContext } from "./context/AuthContext";
+import { RootStackParamList, MainTabParamList } from './types/navigation';
+import { AuthContext, type AuthUser } from './context/AuthContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -91,8 +91,7 @@ function MainTabs() {
 // ── Inner app that consumes theme ────────────────────────────────────
 
 function ThemedApp() {
-  const [user, setUser] = useState<any | null>(null);
-  const [initializing, setInitializing] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const { colors } = useTheme();
 
@@ -101,22 +100,30 @@ function ThemedApp() {
   useEffect(() => {
     (async () => {
       const authed = await isAuthenticated();
-      if (authed) setUser({});
+      if (authed) {
+        const user = await getUser();
+        if (user) {
+          setUser(user);
+        }
+      }
       setAuthReady(true);
-      setInitializing(false);
     })();
   }, []);
 
-  const login = (userData: any) => setUser(userData);
-  const logout = () => {
+  const login = (userData: AuthUser) => setUser(userData);
+  const logout = async () => {
     setUser(null);
-    import("./services/auth").then((m) => m.clearToken());
+    const { clearToken, clearUser } = await import('./services/auth');
+    await clearToken();
+    await clearUser();
   };
 
-  if (!authReady) return null;
+  if (!authReady) {
+    return null;
+  }
 
   return (
-    <AuthContext.Provider value={{ user, setUser: login, login, logout }}>
+    <AuthContext.Provider value={{ user, setUser, login, logout }}>
       <NavigationContainer>
         <Stack.Navigator
           screenOptions={{
@@ -128,15 +135,11 @@ function ThemedApp() {
         >
           {isAuth ? (
             <>
-              <Stack.Screen
-                name="Main"
-                component={MainTabs}
-                options={{ headerShown: false }}
-              />
+              <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
               <Stack.Screen
                 name="BookDetail"
                 component={BookDetailScreen}
-                options={{ title: "Book Details" }}
+                options={{ title: 'Book Details' }}
               />
               <Stack.Screen
                 name="Reader"
@@ -151,21 +154,13 @@ function ThemedApp() {
               <Stack.Screen
                 name="Notes"
                 component={NotesScreen}
-                options={{ title: "Notes & Highlights" }}
+                options={{ title: 'Notes & Highlights' }}
               />
-               <Stack.Screen
-                 name="AI"
-                 component={AIScreen}
-                 options={{ headerShown: false }}
-               />
+              <Stack.Screen name="AI" component={AIScreen} options={{ headerShown: false }} />
             </>
           ) : (
             <>
-              <Stack.Screen
-                name="Login"
-                component={LoginScreen}
-                options={{ headerShown: false }}
-              />
+              <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
               <Stack.Screen
                 name="Register"
                 component={RegisterScreen}

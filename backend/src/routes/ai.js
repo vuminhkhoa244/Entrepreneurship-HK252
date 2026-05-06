@@ -4,13 +4,9 @@ import { authMiddleware } from '../middleware/auth.js';
 import { aiLimiter } from '../middleware/rateLimiter.js';
 import { validateUUID, validateChapterIndex } from '../middleware/validation.js';
 import { logger } from '../middleware/logging.js';
-import { fileURLToPath } from 'url';
 import epub2 from 'epub2';
-import { join, dirname } from 'path';
+import { join } from 'path';
 const { Epub } = epub2;
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -27,14 +23,14 @@ const MAX_QUESTION_LENGTH = 1000;
 async function getChapterContent(bookId, chapterIndex, userId) {
   const db = getDb();
   const book = db.prepare('SELECT * FROM books WHERE id = ? AND user_id = ?').get(bookId, userId);
-  
+
   if (!book || book.file_type !== 'epub') {
     throw new Error('Book not found or not an EPUB');
   }
 
   const epub = new Epub(join(process.cwd(), book.file_url));
   await epub.parse();
-  
+
   const chapters = epub.flow;
   if (!chapters || chapterIndex < 0 || chapterIndex >= chapters.length) {
     throw new Error('Chapter not found');
@@ -51,7 +47,7 @@ async function getChapterContent(bookId, chapterIndex, userId) {
 async function callOpenRouter(messages, model = null) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   const aiModel = model || process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
-  
+
   if (!apiKey) {
     throw new Error('AI service is not configured');
   }
@@ -64,10 +60,10 @@ async function callOpenRouter(messages, model = null) {
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': 'https://ebookreader.app',
-      'X-Title': 'Ebook Reader AI'
+      'X-Title': 'Ebook Reader AI',
     },
     timeout: 30000, // 30 second timeout
     body: JSON.stringify({
@@ -82,18 +78,18 @@ async function callOpenRouter(messages, model = null) {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     const errorMsg = errorData.error?.message || 'AI API request failed';
-    
+
     if (response.status === 429) {
       throw new Error('AI service rate limit exceeded. Please try again later.');
     } else if (response.status === 401) {
       throw new Error('AI service authentication failed');
     }
-    
+
     throw new Error(errorMsg);
   }
 
   const data = await response.json();
-  
+
   if (!data.choices || !data.choices[0] || !data.choices[0].message) {
     throw new Error('Invalid response from AI service');
   }
@@ -111,7 +107,7 @@ router.post('/:bookId/summarize/chapter', async (req, res) => {
   try {
     const { chapterIndex } = req.body;
     const bookId = req.params.bookId;
-    
+
     // Validate inputs
     if (!validateUUID(bookId)) {
       return res.status(400).json({ error: 'Invalid book ID' });
@@ -122,9 +118,10 @@ router.post('/:bookId/summarize/chapter', async (req, res) => {
     }
 
     const db = getDb();
-    const book = db.prepare('SELECT file_type FROM books WHERE id = ? AND user_id = ?')
+    const book = db
+      .prepare('SELECT file_type FROM books WHERE id = ? AND user_id = ?')
       .get(bookId, req.user.id);
-    
+
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
@@ -135,24 +132,29 @@ router.post('/:bookId/summarize/chapter', async (req, res) => {
 
     const content = await getChapterContent(bookId, chapterIndex, req.user.id);
     const text = content.substring(0, MAX_TEXT_LENGTH);
-    
+
     const messages = [
       {
         role: 'system',
-        content: 'You are a helpful reading assistant. Provide a clear, concise chapter summary focusing on key points and main ideas. Format clearly with main points.'
+        content:
+          'You are a helpful reading assistant. Provide a clear, concise chapter summary focusing on key points and main ideas. Format clearly with main points.',
       },
       {
         role: 'user',
-        content: `Summarize this chapter:\n\n${text}`
-      }
+        content: `Summarize this chapter:\n\n${text}`,
+      },
     ];
 
     const summary = await callOpenRouter(messages);
-    
+
     logger.info('Chapter summarized', { userId: req.user.id, bookId, chapterIndex });
     res.json({ summary });
   } catch (err) {
-    logger.error('Summarize chapter error', { userId: req.user.id, bookId: req.params.bookId, error: err.message });
+    logger.error('Summarize chapter error', {
+      userId: req.user.id,
+      bookId: req.params.bookId,
+      error: err.message,
+    });
     res.status(500).json({ error: 'Failed to generate summary' });
   }
 });
@@ -165,7 +167,7 @@ router.post('/:bookId/summarize/text', async (req, res) => {
   try {
     const { text } = req.body;
     const bookId = req.params.bookId;
-    
+
     if (!validateUUID(bookId)) {
       return res.status(400).json({ error: 'Invalid book ID' });
     }
@@ -176,9 +178,10 @@ router.post('/:bookId/summarize/text', async (req, res) => {
 
     // Verify book ownership
     const db = getDb();
-    const book = db.prepare('SELECT id FROM books WHERE id = ? AND user_id = ?')
+    const book = db
+      .prepare('SELECT id FROM books WHERE id = ? AND user_id = ?')
       .get(bookId, req.user.id);
-    
+
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
@@ -188,16 +191,17 @@ router.post('/:bookId/summarize/text', async (req, res) => {
     const messages = [
       {
         role: 'system',
-        content: 'You are a helpful reading assistant. Provide a concise summary of the given text.'
+        content:
+          'You are a helpful reading assistant. Provide a concise summary of the given text.',
       },
       {
         role: 'user',
-        content: `Summarize this text:\n\n${truncatedText}`
-      }
+        content: `Summarize this text:\n\n${truncatedText}`,
+      },
     ];
 
     const summary = await callOpenRouter(messages);
-    
+
     logger.info('Text summarized', { userId: req.user.id, bookId, textLength: text.length });
     res.json({ summary });
   } catch (err) {
@@ -214,7 +218,7 @@ router.post('/:bookId/key-ideas', async (req, res) => {
   try {
     const { text } = req.body;
     const bookId = req.params.bookId;
-    
+
     if (!validateUUID(bookId)) {
       return res.status(400).json({ error: 'Invalid book ID' });
     }
@@ -224,9 +228,10 @@ router.post('/:bookId/key-ideas', async (req, res) => {
     }
 
     const db = getDb();
-    const book = db.prepare('SELECT id FROM books WHERE id = ? AND user_id = ?')
+    const book = db
+      .prepare('SELECT id FROM books WHERE id = ? AND user_id = ?')
       .get(bookId, req.user.id);
-    
+
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
@@ -236,20 +241,21 @@ router.post('/:bookId/key-ideas', async (req, res) => {
     const messages = [
       {
         role: 'system',
-        content: 'You are a helpful reading assistant. Extract 3-7 key ideas and main concepts from the text. Return only the ideas as a clean list.'
+        content:
+          'You are a helpful reading assistant. Extract 3-7 key ideas and main concepts from the text. Return only the ideas as a clean list.',
       },
       {
         role: 'user',
-        content: `Extract the key ideas:\n\n${truncatedText}`
-      }
+        content: `Extract the key ideas:\n\n${truncatedText}`,
+      },
     ];
 
     const result = await callOpenRouter(messages);
-    
+
     const ideas = result
       .split('\n')
-      .map(line => line.replace(/^[\s\-\*\•\u2022\d.]+/, '').trim())
-      .filter(line => line.length > 5 && line.length < 300)
+      .map((line) => line.replace(/^[\s\-*•\u2022\d.]+/, '').trim())
+      .filter((line) => line.length > 5 && line.length < 300)
       .slice(0, 10);
 
     logger.info('Key ideas extracted', { userId: req.user.id, bookId });
@@ -268,7 +274,7 @@ router.post('/:bookId/bullet-summary', async (req, res) => {
   try {
     const { text } = req.body;
     const bookId = req.params.bookId;
-    
+
     if (!validateUUID(bookId)) {
       return res.status(400).json({ error: 'Invalid book ID' });
     }
@@ -278,9 +284,10 @@ router.post('/:bookId/bullet-summary', async (req, res) => {
     }
 
     const db = getDb();
-    const book = db.prepare('SELECT id FROM books WHERE id = ? AND user_id = ?')
+    const book = db
+      .prepare('SELECT id FROM books WHERE id = ? AND user_id = ?')
       .get(bookId, req.user.id);
-    
+
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
@@ -290,20 +297,21 @@ router.post('/:bookId/bullet-summary', async (req, res) => {
     const messages = [
       {
         role: 'system',
-        content: 'Create a bullet-point summary. Each bullet should be clear and concise. Format as a clean list.'
+        content:
+          'Create a bullet-point summary. Each bullet should be clear and concise. Format as a clean list.',
       },
       {
         role: 'user',
-        content: `Create a bullet-point summary:\n\n${truncatedText}`
-      }
+        content: `Create a bullet-point summary:\n\n${truncatedText}`,
+      },
     ];
 
     const result = await callOpenRouter(messages);
-    
+
     const bullets = result
       .split('\n')
-      .map(line => line.replace(/^[\s\-\*\•\u2022\d.]+/, '').trim())
-      .filter(line => line.length > 5 && line.length < 250)
+      .map((line) => line.replace(/^[\s\-*•\u2022\d.]+/, '').trim())
+      .filter((line) => line.length > 5 && line.length < 250)
       .slice(0, 20);
 
     logger.info('Bullet summary generated', { userId: req.user.id, bookId });
@@ -322,7 +330,7 @@ router.post('/:bookId/ask', async (req, res) => {
   try {
     const { question, context } = req.body;
     const bookId = req.params.bookId;
-    
+
     if (!validateUUID(bookId)) {
       return res.status(400).json({ error: 'Invalid book ID' });
     }
@@ -332,26 +340,29 @@ router.post('/:bookId/ask', async (req, res) => {
     }
 
     if (question.length > MAX_QUESTION_LENGTH) {
-      return res.status(400).json({ error: `Question too long (max ${MAX_QUESTION_LENGTH} characters)` });
+      return res
+        .status(400)
+        .json({ error: `Question too long (max ${MAX_QUESTION_LENGTH} characters)` });
     }
 
     const db = getDb();
-    const book = db.prepare('SELECT title, author, file_type FROM books WHERE id = ? AND user_id = ?')
+    const book = db
+      .prepare('SELECT title, author, file_type FROM books WHERE id = ? AND user_id = ?')
       .get(bookId, req.user.id);
-    
+
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
 
     let contextText = '';
-    
+
     if (context && typeof context === 'string' && context.length > 0) {
       contextText = context.substring(0, MAX_TEXT_LENGTH);
     } else if (book.file_type === 'epub') {
       try {
         const firstChapter = await getChapterContent(bookId, 0, req.user.id);
         contextText = `Book: ${book.title}\nAuthor: ${book.author || 'Unknown'}\n\nContext:\n${firstChapter.substring(0, 8000)}`;
-      } catch (err) {
+      } catch {
         contextText = `Book: ${book.title}\nAuthor: ${book.author || 'Unknown'}`;
       }
     } else {
@@ -361,24 +372,31 @@ router.post('/:bookId/ask', async (req, res) => {
     const messages = [
       {
         role: 'system',
-        content: 'You are an AI reading assistant helping users understand books. Answer questions based on the provided context. Be accurate and helpful.'
+        content:
+          'You are an AI reading assistant helping users understand books. Answer questions based on the provided context. Be accurate and helpful.',
       },
       {
         role: 'user',
-        content: `Context:\n${contextText}\n\nQuestion: ${question}`
-      }
+        content: `Context:\n${contextText}\n\nQuestion: ${question}`,
+      },
     ];
 
     const answer = await callOpenRouter(messages);
-    
-    logger.info('Question answered', { userId: req.user.id, bookId, questionLength: question.length });
+
+    logger.info('Question answered', {
+      userId: req.user.id,
+      bookId,
+      questionLength: question.length,
+    });
     res.json({ answer });
   } catch (err) {
-    logger.error('Ask question error', { userId: req.user.id, bookId: req.params.bookId, error: err.message });
+    logger.error('Ask question error', {
+      userId: req.user.id,
+      bookId: req.params.bookId,
+      error: err.message,
+    });
     res.status(500).json({ error: 'Failed to answer question' });
   }
 });
 
 export default router;
-
-

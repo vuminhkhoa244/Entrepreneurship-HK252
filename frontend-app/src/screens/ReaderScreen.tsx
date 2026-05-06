@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,28 +10,30 @@ import {
   Modal,
   TextInput,
   ScrollView,
-} from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
-import RenderHTML from "react-native-render-html";
-import { ReaderAPI, BookmarkAPI, AIAPI } from "../services/api";
-import type { RootStackParamList } from "../types/navigation";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { FONT_SIZES } from "../constants/theme";
-import { useTheme } from "../context/ThemeContext";
+} from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import RenderHTML from 'react-native-render-html';
+import axios from 'axios';
+import { ReaderAPI, BookmarkAPI } from '../services/api';
+import type { RootStackParamList } from '../types/navigation';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { FONT_SIZES } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 
-const { width } = Dimensions.get("window");
+const { width } = Dimensions.get('window');
 
 export default function ReaderScreen() {
-  const route = useRoute<any>();
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { bookId, fileType } = route.params as {
-    bookId: string;
-    fileType: "epub" | "pdf";
-  };
+  const route = useRoute<RouteProp<RootStackParamList, 'Reader'>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { bookId, fileType } = route.params;
 
-  const [chapter, setChapter] = useState<any | null>(null);
+  const [chapter, setChapter] = useState<{
+    chapterIndex: number;
+    title: string;
+    content: string;
+  } | null>(null);
   const [totalChapters, setTotalChapters] = useState(0);
   const [loading, setLoading] = useState(true);
   const [fontSize, setFontSize] = useState(FONT_SIZES.md);
@@ -40,8 +42,7 @@ export default function ReaderScreen() {
   const [bookmarked, setBookmarked] = useState(false);
 
   const [notes, setNotes] = useState<{ id: string; content: string }[]>([]);
-  const [noteInput, setNoteInput] = useState("");
-  const [showAI, setShowAI] = useState(false);
+  const [noteInput, setNoteInput] = useState('');
   const [showAIOptions, setShowAIOptions] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
@@ -53,16 +54,17 @@ export default function ReaderScreen() {
       try {
         const { data } = await ReaderAPI.chapter(bookId, index);
         setChapter(data);
-      } catch (e: any) {
-        Alert.alert(
-          "Error",
-          e.response?.data?.error || "Failed to load chapter",
-        );
+      } catch (e: unknown) {
+        if (axios.isAxiosError(e)) {
+          Alert.alert('Error', e.response?.data?.error || 'Failed to load chapter');
+        } else {
+          Alert.alert('Error', 'Failed to load chapter');
+        }
       } finally {
         setLoading(false);
       }
     },
-    [bookId],
+    [bookId]
   );
 
   useEffect(() => {
@@ -70,16 +72,20 @@ export default function ReaderScreen() {
       loadChapter(0);
       try {
         const { data } = await ReaderAPI.contents(bookId);
-        if ("totalChapters" in data) setTotalChapters(data.totalChapters);
-        if ("chapters" in data) setTotalChapters(data.chapters.length);
-      } catch {
-        /* */
+        if ('totalChapters' in data) {
+          setTotalChapters(data.totalChapters);
+        }
+        if ('chapters' in data) {
+          setTotalChapters(data.chapters.length);
+        }
+      } catch (e) {
+        console.error(e);
       }
       try {
         const { data } = await BookmarkAPI.list(bookId);
         setBookmarked(data.length > 0);
-      } catch {
-        /* */
+      } catch (e) {
+        console.error(e);
       }
     }
     loadInitialData();
@@ -88,19 +94,16 @@ export default function ReaderScreen() {
   const updateProgress = useCallback(
     async (chapterIndex: number) => {
       try {
-        await ReaderAPI.setProgress(
-          bookId,
-          chapterIndex,
-          chapterIndex,
-          undefined,
-          totalChapters,
-        );
-      } catch {}
+        await ReaderAPI.setProgress(bookId, chapterIndex, chapterIndex, undefined, totalChapters);
+      } catch (e) {
+        console.error(e);
+      }
     },
-    [bookId, totalChapters],
+    [bookId, totalChapters]
   );
 
   useEffect(() => {
+    // eslint-disable-next-line eqeqeq
     if (totalChapters > 0 && chapter?.chapterIndex != null) {
       updateProgress(chapter.chapterIndex);
     }
@@ -126,20 +129,22 @@ export default function ReaderScreen() {
         setBookmarked(true);
       }
     } catch {
-      Alert.alert("Error", "Failed to manage bookmark");
+      Alert.alert('Error', 'Failed to manage bookmark');
     }
   };
 
   const addNote = async () => {
-    if (!noteInput.trim()) return;
+    if (!noteInput.trim()) {
+      return;
+    }
     try {
-      const { data } = await import("../services/api").then((m) =>
-        m.NoteAPI.create(bookId, { content: noteInput }),
+      const { data } = await import('../services/api').then((m) =>
+        m.NoteAPI.create(bookId, { content: noteInput })
       );
       setNotes((prev) => [...prev, data]);
-      setNoteInput("");
+      setNoteInput('');
     } catch {
-      Alert.alert("Error", "Failed to save note");
+      Alert.alert('Error', 'Failed to save note');
     }
   };
 
@@ -154,9 +159,7 @@ export default function ReaderScreen() {
   if (!chapter) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorText, { color: colors.text }]}>
-          No content available
-        </Text>
+        <Text style={[styles.errorText, { color: colors.text }]}>No content available</Text>
       </View>
     );
   }
@@ -173,19 +176,19 @@ export default function ReaderScreen() {
     h1: {
       color: colors.text,
       fontSize: fontSize * 1.5,
-      fontWeight: "bold" as const,
+      fontWeight: 'bold' as const,
       marginBottom: 8,
     },
     h2: {
       color: colors.text,
       fontSize: fontSize * 1.3,
-      fontWeight: "bold" as const,
+      fontWeight: 'bold' as const,
       marginBottom: 8,
     },
     h3: {
       color: colors.text,
       fontSize: fontSize * 1.2,
-      fontWeight: "bold" as const,
+      fontWeight: 'bold' as const,
       marginBottom: 8,
     },
     body: { color: colors.text, fontSize, lineHeight: fontSize * 1.6 },
@@ -211,7 +214,7 @@ export default function ReaderScreen() {
         <View style={styles.topActions}>
           <TouchableOpacity onPress={toggleBookmark}>
             <Ionicons
-              name={bookmarked ? "bookmark" : "bookmark-outline"}
+              name={bookmarked ? 'bookmark' : 'bookmark-outline'}
               size={22}
               color={colors.text}
             />
@@ -239,33 +242,18 @@ export default function ReaderScreen() {
             },
           ]}
         >
-          <Text style={[styles.menuLabel, { color: colors.text }]}>
-            Font Size
-          </Text>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Font Size</Text>
           <View style={styles.fontControls}>
-            <TouchableOpacity
-              onPress={() => setFontSize(Math.max(FONT_SIZES.xs, fontSize - 2))}
-            >
+            <TouchableOpacity onPress={() => setFontSize(Math.max(FONT_SIZES.xs, fontSize - 2))}>
               <Ionicons name="remove" size={24} color={colors.accent} />
             </TouchableOpacity>
-            <Text style={[styles.fontSizeText, { color: colors.text }]}>
-              {fontSize}px
-            </Text>
-            <TouchableOpacity
-              onPress={() =>
-                setFontSize(Math.min(FONT_SIZES.xxl, fontSize + 2))
-              }
-            >
+            <Text style={[styles.fontSizeText, { color: colors.text }]}>{fontSize}px</Text>
+            <TouchableOpacity onPress={() => setFontSize(Math.min(FONT_SIZES.xxl, fontSize + 2))}>
               <Ionicons name="add" size={24} color={colors.accent} />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.closeMenu}
-            onPress={() => setShowMenu(false)}
-          >
-            <Text style={[styles.closeMenuText, { color: colors.accent }]}>
-              Close
-            </Text>
+          <TouchableOpacity style={styles.closeMenu} onPress={() => setShowMenu(false)}>
+            <Text style={[styles.closeMenuText, { color: colors.accent }]}>Close</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -315,11 +303,7 @@ export default function ReaderScreen() {
           <Ionicons
             name="chevron-forward"
             size={28}
-            color={
-              currentChapterIndex >= totalChapters - 1
-                ? colors.textMuted
-                : colors.accent
-            }
+            color={currentChapterIndex >= totalChapters - 1 ? colors.textMuted : colors.accent}
           />
         </TouchableOpacity>
       </View>
@@ -327,23 +311,15 @@ export default function ReaderScreen() {
       {/* Notes Modal */}
       <Modal visible={showNotes} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View
-            style={[styles.modalContent, { backgroundColor: colors.surface }]}
-          >
-            <View
-              style={[styles.modalHeader, { borderBottomColor: colors.border }]}
-            >
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                Notes
-              </Text>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Notes</Text>
               <TouchableOpacity onPress={() => setShowNotes(false)}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView
-              style={[styles.notesList, { backgroundColor: colors.background }]}
-            >
+            <ScrollView style={[styles.notesList, { backgroundColor: colors.background }]}>
               {notes.length === 0 ? (
                 <Text style={[styles.notesEmpty, { color: colors.textDim }]}>
                   No notes yet. Add one below.
@@ -360,9 +336,7 @@ export default function ReaderScreen() {
                       },
                     ]}
                   >
-                    <Text style={[styles.noteText, { color: colors.text }]}>
-                      {n.content}
-                    </Text>
+                    <Text style={[styles.noteText, { color: colors.text }]}>{n.content}</Text>
                   </View>
                 ))
               )}
@@ -382,10 +356,7 @@ export default function ReaderScreen() {
                 onChangeText={setNoteInput}
                 placeholder="Add a note..."
                 placeholderTextColor={colors.textMuted}
-                style={[
-                  styles.textInput,
-                  { color: colors.text, backgroundColor: colors.card },
-                ]}
+                style={[styles.textInput, { color: colors.text, backgroundColor: colors.card }]}
                 multiline
               />
               <TouchableOpacity
@@ -402,17 +373,11 @@ export default function ReaderScreen() {
       {/* AI Options Modal */}
       <Modal visible={showAIOptions} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View
-            style={[styles.modalContent, { backgroundColor: colors.surface }]}
-          >
-            <View
-              style={[styles.modalHeader, { borderBottomColor: colors.border }]}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="sparkles" size={24} color={colors.accent} />
-                <Text style={[styles.modalTitle, { color: colors.text }]}>
-                  AI Assistant
-                </Text>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>AI Assistant</Text>
               </View>
               <TouchableOpacity onPress={() => setShowAIOptions(false)}>
                 <Ionicons name="close" size={24} color={colors.text} />
@@ -425,17 +390,20 @@ export default function ReaderScreen() {
               </Text>
 
               <TouchableOpacity
-                style={[styles.optionItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+                style={[
+                  styles.optionItem,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
                 onPress={() => {
                   setShowAIOptions(false);
-                  navigation.navigate("AI", {
+                  navigation.navigate('AI', {
                     bookId,
                     fileType,
                     chapterIndex: currentChapterIndex,
                   });
                 }}
               >
-                <View style={[styles.optionIcon, { backgroundColor: colors.accent + "20" }]}>
+                <View style={[styles.optionIcon, { backgroundColor: colors.accent + '20' }]}>
                   <Ionicons name="document-text-outline" size={24} color={colors.accent} />
                 </View>
                 <View style={styles.optionContent}>
@@ -450,23 +418,24 @@ export default function ReaderScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.optionItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+                style={[
+                  styles.optionItem,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
                 onPress={() => {
                   setShowAIOptions(false);
-                  navigation.navigate("AI", {
+                  navigation.navigate('AI', {
                     bookId,
                     fileType,
                     chapterIndex: currentChapterIndex,
                   });
                 }}
               >
-                <View style={[styles.optionIcon, { backgroundColor: colors.success + "20" }]}>
+                <View style={[styles.optionIcon, { backgroundColor: colors.success + '20' }]}>
                   <Ionicons name="bulb-outline" size={24} color={colors.success} />
                 </View>
                 <View style={styles.optionContent}>
-                  <Text style={[styles.optionTitle, { color: colors.text }]}>
-                    Key Ideas
-                  </Text>
+                  <Text style={[styles.optionTitle, { color: colors.text }]}>Key Ideas</Text>
                   <Text style={[styles.optionDesc, { color: colors.textDim }]}>
                     Extract main concepts and ideas
                   </Text>
@@ -475,23 +444,24 @@ export default function ReaderScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.optionItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+                style={[
+                  styles.optionItem,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
                 onPress={() => {
                   setShowAIOptions(false);
-                  navigation.navigate("AI", {
+                  navigation.navigate('AI', {
                     bookId,
                     fileType,
                     chapterIndex: currentChapterIndex,
                   });
                 }}
               >
-                <View style={[styles.optionIcon, { backgroundColor: colors.warning + "20" }]}>
+                <View style={[styles.optionIcon, { backgroundColor: colors.warning + '20' }]}>
                   <Ionicons name="list-outline" size={24} color={colors.warning} />
                 </View>
                 <View style={styles.optionContent}>
-                  <Text style={[styles.optionTitle, { color: colors.text }]}>
-                    Bullet Summary
-                  </Text>
+                  <Text style={[styles.optionTitle, { color: colors.text }]}>Bullet Summary</Text>
                   <Text style={[styles.optionDesc, { color: colors.textDim }]}>
                     Quick overview in bullet points
                   </Text>
@@ -506,16 +476,14 @@ export default function ReaderScreen() {
                 ]}
                 onPress={() => {
                   setShowAIOptions(false);
-                  navigation.navigate("AI", { bookId, fileType });
+                  navigation.navigate('AI', { bookId, fileType });
                 }}
               >
-                <View style={[styles.optionIcon, { backgroundColor: colors.info + "20" }]}>
+                <View style={[styles.optionIcon, { backgroundColor: colors.info + '20' }]}>
                   <Ionicons name="chatbubble-outline" size={24} color="#3b82f6" />
                 </View>
                 <View style={styles.optionContent}>
-                  <Text style={[styles.optionTitle, { color: colors.text }]}>
-                    Ask AI Assistant
-                  </Text>
+                  <Text style={[styles.optionTitle, { color: colors.text }]}>Ask AI Assistant</Text>
                   <Text style={[styles.optionDesc, { color: colors.textDim }]}>
                     Open chat with full context
                   </Text>
@@ -532,41 +500,41 @@ export default function ReaderScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorText: { fontSize: FONT_SIZES.lg },
   topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
   title: {
     fontSize: FONT_SIZES.md,
-    fontWeight: "600",
+    fontWeight: '600',
     flex: 1,
     marginHorizontal: 12,
   },
-  topActions: { flexDirection: "row", gap: 12 },
+  topActions: { flexDirection: 'row', gap: 12 },
   menu: { padding: 16, borderBottomWidth: 1 },
   menuLabel: { fontSize: FONT_SIZES.sm, marginBottom: 8 },
   fontControls: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 24,
     marginBottom: 8,
   },
   fontSizeText: { fontSize: FONT_SIZES.lg },
-  closeMenu: { alignItems: "center", paddingVertical: 8 },
+  closeMenu: { alignItems: 'center', paddingVertical: 8 },
   closeMenuText: { fontSize: FONT_SIZES.md },
   content: { flex: 1 },
   contentInner: { padding: 16 },
   bottomBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderTopWidth: 1,
@@ -574,26 +542,32 @@ const styles = StyleSheet.create({
   chapterInfo: { fontSize: FONT_SIZES.sm },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    height: "70%",
+    height: '70%',
   },
   modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
   },
-  modalTitle: { fontSize: FONT_SIZES.lg, fontWeight: "600" },
+  modalTitle: { fontSize: FONT_SIZES.lg, fontWeight: '600' },
   optionsList: { flex: 1, padding: 16 },
-  optionsHeader: { fontSize: FONT_SIZES.sm, marginBottom: 12, textAlign: "center", textTransform: "uppercase", letterSpacing: 1 },
+  optionsHeader: {
+    fontSize: FONT_SIZES.sm,
+    marginBottom: 12,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
   optionItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -604,14 +578,14 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   optionContent: { flex: 1 },
-  optionTitle: { fontSize: FONT_SIZES.md, fontWeight: "600", marginBottom: 4 },
+  optionTitle: { fontSize: FONT_SIZES.md, fontWeight: '600', marginBottom: 4 },
   optionDesc: { fontSize: FONT_SIZES.sm },
   notesList: { flex: 1, padding: 16 },
-  notesEmpty: { fontSize: FONT_SIZES.md, textAlign: "center", marginTop: 32 },
+  notesEmpty: { fontSize: FONT_SIZES.md, textAlign: 'center', marginTop: 32 },
   noteItem: {
     borderRadius: 8,
     padding: 12,
@@ -620,8 +594,8 @@ const styles = StyleSheet.create({
   },
   noteText: { fontSize: FONT_SIZES.sm },
   noteInput: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 12,
     borderTopWidth: 1,
     gap: 8,
@@ -639,7 +613,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     width: 40,
     height: 40,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

@@ -29,7 +29,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(THEME_KEY).then((v) => {
-      if (v === 'light' || v === 'dark') rawSetMode(v);
+      if (v === 'light' || v === 'dark') {
+        rawSetMode(v);
+      }
     });
   }, []);
 
