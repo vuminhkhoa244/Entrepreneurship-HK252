@@ -45,7 +45,4 @@ services:
         value: openai/gpt-4o-mini
       - key: ALLOWED_ORIGINS
         value: https://your-frontend.vercel.app,http://localhost:3000,exp://127.0.0.1:*
-    disk:
-      name: data
-      mountPath: /var/data
-      sizeGB: 1
+
