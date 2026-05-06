@@ -6,6 +6,7 @@ services:
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
+    sourceDir: backend
     envVars:
       - key: NODE_ENV
         value: production
@@ -42,7 +43,7 @@ services:
       - key: OPENROUTER_API_KEY
         sync: false
       - key: OPENROUTER_MODEL
-        value: openai/gpt-4o-mini
+        value: baidu/cobuddy:free
       - key: ALLOWED_ORIGINS
-        value: https://your-frontend.vercel.app,http://localhost:3000,exp://127.0.0.1:*
+        value: "http://localhost:8081,http://localhost:19006,exp://127.0.0.1:*"
 

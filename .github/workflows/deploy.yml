@@ -3,6 +3,10 @@ name: Deploy to Production
 on:
   push:
     branches: [main]
+    paths:
+      - 'frontend-app/**'  # Chỉ chạy khi có thay đổi trong thư mục frontend
+      - '.github/workflows/deploy.yml' # Chạy khi bạn sửa chính file cấu hình này
+      - 'backend/**'
   workflow_dispatch:
     inputs:
       environment:
