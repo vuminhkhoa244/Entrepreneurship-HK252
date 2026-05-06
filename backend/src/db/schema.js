@@ -9,7 +9,7 @@ let db;
 
 export function getDb() {
   if (!db) {
-    const url = process.env.DATABASE_URL || './data/library.db';
+    const url = process.env.DATABASE_PATH || process.env.DATABASE_URL || '/tmp/data/library.db';
     const dbPath = url.startsWith('postgres') ? join(__dirname, '..', 'data', 'library.db') : url;
     db = new Database(dbPath);
     db.pragma('journal_mode = WAL');

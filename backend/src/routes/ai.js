@@ -29,7 +29,7 @@ async function getChapterContent(bookId, chapterIndex, userId) {
   }
 
   const filename = basename(book.file_url);
-  const epub = new Epub(join(process.env.UPLOAD_DIR || './uploads', filename));
+  const epub = new Epub(join(process.env.UPLOAD_DIR || '/tmp/uploads', filename));
   await epub.parse();
 
   const chapters = epub.flow;

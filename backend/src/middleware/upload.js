@@ -15,7 +15,7 @@ const MAGIC_NUMBERS = {
 };
 
 // Create uploads dir
-const uploadDir = process.env.UPLOAD_DIR || './uploads';
+const uploadDir = process.env.UPLOAD_DIR || '/tmp/uploads';
 if (!existsSync(uploadDir)) {
   mkdirSync(uploadDir, { recursive: true });
 }

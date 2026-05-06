@@ -26,7 +26,7 @@ router.get('/:bookId/file', (req, res) => {
   }
 
   const filename = basename(book.file_url);
-  const filePath = join(process.env.UPLOAD_DIR || './uploads', filename);
+  const filePath = join(process.env.UPLOAD_DIR || '/tmp/uploads', filename);
   if (!existsSync(filePath)) {
     return res.status(404).json({ error: 'File not found' });
   }
@@ -122,7 +122,7 @@ router.get('/:bookId/contents', async (req, res) => {
     if (book.file_type === 'epub') {
       const { Epub } = await import('epub2');
       const filename = basename(book.file_url);
-      const epub = new Epub(join(process.env.UPLOAD_DIR || './uploads', filename));
+      const epub = new Epub(join(process.env.UPLOAD_DIR || '/tmp/uploads', filename));
       await epub.parse();
       const chapters = (epub.flow || []).map((ch, i) => ({
         id: ch.id,

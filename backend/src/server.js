@@ -1,7 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
 import dotenv from 'dotenv';
 import { getDb } from './db/index.js';
 import authRoutes from './routes/auth.js';
@@ -26,9 +24,6 @@ requiredEnvs.forEach((env) => {
     process.exit(1);
   }
 });
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -74,7 +69,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
 // Serve uploaded files (with cache headers)
-const uploadDir = process.env.UPLOAD_DIR || resolve(__dirname, '..', 'uploads');
+const uploadDir = process.env.UPLOAD_DIR || '/tmp/uploads';
 app.use('/uploads', express.static(uploadDir, { maxAge: '1h', etag: false }));
 
 // API rate limiting

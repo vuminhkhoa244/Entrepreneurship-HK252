@@ -21,9 +21,9 @@ services:
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
       - key: DATABASE_PATH
-        value: /var/data/library.db
+        value: /tmp/data/library.db
       - key: UPLOAD_DIR
-        value: /var/data/uploads
+        value: /tmp/uploads
       - key: LOG_LEVEL
         value: info
       - key: ENABLE_REQUEST_LOGGING

@@ -191,7 +191,7 @@ router.delete('/:id', async (req, res) => {
 
     // Delete file if exists
     const filename = basename(book.file_url);
-    const fullPath = join(process.env.UPLOAD_DIR || './uploads', filename);
+    const fullPath = join(process.env.UPLOAD_DIR || '/tmp/uploads', filename);
     if (existsSync(fullPath)) {
       try {
         await fs.unlink(fullPath);
