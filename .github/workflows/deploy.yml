@@ -51,7 +51,7 @@ jobs:
           ls -lh backend-${{ github.sha }}.tar.gz
       
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: backend-build
           path: backend-${{ github.sha }}.tar.gz
