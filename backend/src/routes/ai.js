@@ -5,7 +5,7 @@ import { aiLimiter } from '../middleware/rateLimiter.js';
 import { validateUUID, validateChapterIndex } from '../middleware/validation.js';
 import { logger } from '../middleware/logging.js';
 import epub2 from 'epub2';
-import { join } from 'path';
+import { join, basename } from 'path';
 const { Epub } = epub2;
 
 const router = express.Router();
@@ -14,7 +14,6 @@ router.use(aiLimiter);
 
 const MAX_TEXT_LENGTH = 15000;
 const MAX_QUESTION_LENGTH = 1000;
-const { basename } = require('path');
 
 // ─── AI Utilities ────────────────────────────────────────────────────
 
