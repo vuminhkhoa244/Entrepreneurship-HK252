@@ -5,7 +5,7 @@ import { upload, validateUploadedFile } from '../middleware/upload.js';
 import { uploadLimiter } from '../middleware/rateLimiter.js';
 import { validateUUID } from '../middleware/validation.js';
 import { extractEpubMetadata, extractPdfInfo } from '../utils/book-parser.js';
-import { extname, join } from 'path';
+import { extname, join, basename } from 'path';
 import { existsSync, promises as fs } from 'fs';
 import crypto from 'crypto';
 import { logger } from '../middleware/logging.js';
@@ -190,7 +190,8 @@ router.delete('/:id', async (req, res) => {
     }
 
     // Delete file if exists
-    const fullPath = join(process.cwd(), book.file_url);
+    const filename = basename(book.file_url);
+    const fullPath = join(process.env.UPLOAD_DIR || './uploads', filename);
     if (existsSync(fullPath)) {
       try {
         await fs.unlink(fullPath);

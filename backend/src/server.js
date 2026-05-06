@@ -74,13 +74,8 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
 // Serve uploaded files (with cache headers)
-app.use(
-  '/uploads',
-  express.static(resolve(__dirname, '..', 'uploads'), {
-    maxAge: '1h',
-    etag: false,
-  })
-);
+const uploadDir = process.env.UPLOAD_DIR || resolve(__dirname, '..', 'uploads');
+app.use('/uploads', express.static(uploadDir, { maxAge: '1h', etag: false }));
 
 // API rate limiting
 app.use('/api/', apiLimiter);

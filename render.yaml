@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: ebook-reader-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: DATABASE_PATH
+        value: /var/data/library.db
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: LOG_LEVEL
+        value: info
+      - key: ENABLE_REQUEST_LOGGING
+        value: 'false'
+      - key: AUTH_RATE_LIMIT_MAX_REQUESTS
+        value: '5'
+      - key: AUTH_RATE_LIMIT_WINDOW_MS
+        value: '900000'
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: '100'
+      - key: RATE_LIMIT_WINDOW_MS
+        value: '900000'
+      - key: MAX_UPLOAD_REQUESTS_PER_HOUR
+        value: '10'
+      - key: AI_RATE_LIMIT_PER_HOUR
+        value: '20'
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: openai/gpt-4o-mini
+      - key: ALLOWED_ORIGINS
+        value: https://your-frontend.vercel.app,http://localhost:3000,exp://127.0.0.1:*
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1
