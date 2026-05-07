@@ -114,7 +114,7 @@ jobs:
         working-directory: frontend-app
         run: |
           # Thêm --profile production để tránh việc bị hỏi (interactive)
-          eas build --platform android --profile production --non-interactive
+          eas build --platform android --profile preview --non-interactive
         env:
           # Đổi từ EAS_TOKEN thành EXPO_TOKEN để đúng chuẩn của Expo
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
