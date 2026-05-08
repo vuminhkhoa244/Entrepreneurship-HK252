@@ -46,19 +46,16 @@ export async function extractPdfInfo(filePath) {
 // eslint-disable-next-line no-unused-vars
 async function _isImageBasedPdf(filePath, samplePages = 3) {
   try {
-    // 1. Phải tạo require trước
     const { createRequire } = await import('module');
     const fs = await import('fs');
     const require = createRequire(import.meta.url);
 
-    // 2. Gọi thư viện bằng require vừa tạo
     const pdfModule = require('pdf-parse');
-
-    // 3. Xử lý file
     const bytes = await fs.promises.readFile(filePath);
 
-    // pdf-parse exports a function directly
-    const pdf = await pdfModule(bytes, { max: samplePages });
+    // pdf-parse v2: use function; handle ESM default export
+    const parseFn = pdfModule.default || pdfModule;
+    const pdf = await parseFn(bytes, { max: samplePages });
 
     // If extracted text is very short for multiple pages, likely image-based
     const textLength = (pdf.text || '').trim().length;
@@ -211,11 +208,10 @@ export async function extractPdfText(filePath, maxPages = null) {
     const require = createRequire(import.meta.url);
 
     const pdfModule = require('pdf-parse');
-
     const bytes = await fs.promises.readFile(filePath);
 
-    // Sử dụng maxPages từ tham số của hàm extractPdfText
-    const pdf = await pdfModule(bytes, { max: maxPages || 0 });
+    const parseFn = pdfModule.default || pdfModule;
+    const pdf = await parseFn(bytes, { max: maxPages || 0 });
 
     // Combine text from all pages
     let fullText = pdf.text || '';
@@ -259,11 +255,10 @@ export async function extractPdfPages(filePath, startPage = 0, endPage = null) {
     const require = createRequire(import.meta.url);
 
     const pdfModule = require('pdf-parse');
-
     const bytes = await fs.promises.readFile(filePath);
 
-    // Với hàm lấy range trang, ta thường parse hết hoặc parse đến endPage
-    const pdf = await pdfModule(bytes, { max: endPage || 0 });
+    const parseFn = pdfModule.default || pdfModule;
+    const pdf = await parseFn(bytes, { max: endPage || 0 });
 
     // Get text from specified page range
     const pages = pdf.text.split('\n\n'); // pdf-parse includes page breaks
