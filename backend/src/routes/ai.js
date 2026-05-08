@@ -4,6 +4,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { aiLimiter } from '../middleware/rateLimiter.js';
 import { validateUUID, validateChapterIndex } from '../middleware/validation.js';
 import { logger } from '../middleware/logging.js';
+import { extractPdfText } from '../utils/book-parser.js';
 import epub2 from 'epub2';
 import { join, basename } from 'path';
 const { Epub } = epub2;
@@ -39,6 +40,29 @@ async function getChapterContent(bookId, chapterIndex, userId) {
 
   const content = await epub.getChapterRaw(chapterIndex);
   return content;
+}
+
+/**
+ * Get PDF content for AI processing
+ */
+async function getPdfContent(bookId, userId) {
+  const db = getDb();
+  const book = db.prepare('SELECT * FROM books WHERE id = ? AND user_id = ?').get(bookId, userId);
+
+  if (!book || book.file_type !== 'pdf') {
+    throw new Error('Book not found or not a PDF');
+  }
+
+  const filename = basename(book.file_url);
+  const filePath = join(process.env.UPLOAD_DIR || '/tmp/uploads', filename);
+
+  try {
+    const text = await extractPdfText(filePath, 50); // Limit to first 50 pages for performance
+    return text;
+  } catch (error) {
+    logger.error('PDF content extraction error', { bookId, error: error.message });
+    throw new Error('Failed to extract PDF content');
+  }
 }
 
 /**
@@ -152,6 +176,60 @@ router.post('/:bookId/summarize/chapter', async (req, res) => {
     res.json({ summary });
   } catch (err) {
     logger.error('Summarize chapter error', {
+      userId: req.user.id,
+      bookId: req.params.bookId,
+      error: err.message,
+    });
+    res.status(500).json({ error: 'Failed to generate summary' });
+  }
+});
+
+/**
+ * Summarize PDF file
+ * POST /api/ai/:bookId/summarize/pdf
+ */
+router.post('/:bookId/summarize/pdf', async (req, res) => {
+  try {
+    const bookId = req.params.bookId;
+
+    if (!validateUUID(bookId)) {
+      return res.status(400).json({ error: 'Invalid book ID' });
+    }
+
+    const db = getDb();
+    const book = db
+      .prepare('SELECT file_type FROM books WHERE id = ? AND user_id = ?')
+      .get(bookId, req.user.id);
+
+    if (!book) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+
+    if (book.file_type !== 'pdf') {
+      return res.status(400).json({ error: 'This endpoint is only available for PDF files' });
+    }
+
+    const content = await getPdfContent(bookId, req.user.id);
+    const text = content.substring(0, MAX_TEXT_LENGTH * 2);
+
+    const messages = [
+      {
+        role: 'system',
+        content:
+          'You are a helpful reading assistant. Provide a clear, concise summary of the PDF document focusing on key points and main ideas. Format clearly with main points.',
+      },
+      {
+        role: 'user',
+        content: `Summarize this document:\n\n${text}`,
+      },
+    ];
+
+    const summary = await callOpenRouter(messages);
+
+    logger.info('PDF summarized', { userId: req.user.id, bookId });
+    res.json({ summary });
+  } catch (err) {
+    logger.error('Summarize PDF error', {
       userId: req.user.id,
       bookId: req.params.bookId,
       error: err.message,
@@ -363,6 +441,13 @@ router.post('/:bookId/ask', async (req, res) => {
       try {
         const firstChapter = await getChapterContent(bookId, 0, req.user.id);
         contextText = `Book: ${book.title}\nAuthor: ${book.author || 'Unknown'}\n\nContext:\n${firstChapter.substring(0, 8000)}`;
+      } catch {
+        contextText = `Book: ${book.title}\nAuthor: ${book.author || 'Unknown'}`;
+      }
+    } else if (book.file_type === 'pdf') {
+      try {
+        const pdfContent = await getPdfContent(bookId, req.user.id);
+        contextText = `Book: ${book.title}\nAuthor: ${book.author || 'Unknown'}\n\nContent:\n${pdfContent.substring(0, MAX_TEXT_LENGTH)}`;
       } catch {
         contextText = `Book: ${book.title}\nAuthor: ${book.author || 'Unknown'}`;
       }
