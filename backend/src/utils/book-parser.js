@@ -53,14 +53,14 @@ async function _isImageBasedPdf(filePath, samplePages = 3) {
 
     // 2. Gọi thư viện bằng require vừa tạo
     const pdfModule = require('pdf-parse');
-    const PDFParse = pdfModule.PDFParse || (pdfModule.default && pdfModule.default.PDFParse);
+    const PDFParse =
+      pdfModule.PDFParse || (pdfModule.default && pdfModule.default.PDFParse) || pdfModule;
 
     // 3. Xử lý file
     const bytes = await fs.promises.readFile(filePath);
-    const parser = new PDFParse(bytes);
 
     // Sử dụng samplePages làm giới hạn parse
-    const pdf = await parser.parse({ max: samplePages });
+    const pdf = await PDFParse(bytes, { max: samplePages });
 
     // If extracted text is very short for multiple pages, likely image-based
     const textLength = (pdf.text || '').trim().length;
@@ -213,13 +213,13 @@ export async function extractPdfText(filePath, maxPages = null) {
     const require = createRequire(import.meta.url);
 
     const pdfModule = require('pdf-parse');
-    const PDFParse = pdfModule.PDFParse || (pdfModule.default && pdfModule.default.PDFParse);
+    const PDFParse =
+      pdfModule.PDFParse || (pdfModule.default && pdfModule.default.PDFParse) || pdfModule;
 
     const bytes = await fs.promises.readFile(filePath);
-    const parser = new PDFParse(bytes);
 
     // Sử dụng maxPages từ tham số của hàm extractPdfText
-    const pdf = await parser.parse({ max: maxPages || 0 });
+    const pdf = await PDFParse(bytes, { max: maxPages || 0 });
 
     // Combine text from all pages
     let fullText = pdf.text || '';
@@ -263,13 +263,13 @@ export async function extractPdfPages(filePath, startPage = 0, endPage = null) {
     const require = createRequire(import.meta.url);
 
     const pdfModule = require('pdf-parse');
-    const PDFParse = pdfModule.PDFParse || (pdfModule.default && pdfModule.default.PDFParse);
+    const PDFParse =
+      pdfModule.PDFParse || (pdfModule.default && pdfModule.default.PDFParse) || pdfModule;
 
     const bytes = await fs.promises.readFile(filePath);
-    const parser = new PDFParse(bytes);
 
     // Với hàm lấy range trang, ta thường parse hết hoặc parse đến endPage
-    const pdf = await parser.parse({ max: endPage || 0 });
+    const pdf = await PDFParse(bytes, { max: endPage || 0 });
 
     // Get text from specified page range
     const pages = pdf.text.split('\n\n'); // pdf-parse includes page breaks
