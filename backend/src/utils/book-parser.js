@@ -46,29 +46,19 @@ export async function extractPdfInfo(filePath) {
 // eslint-disable-next-line no-unused-vars
 async function _isImageBasedPdf(filePath, samplePages = 3) {
   try {
+    const { createRequire } = await import('module');
     const fs = await import('fs');
-    const pdfjs = await import('pdfjs-dist');
+    const require = createRequire(import.meta.url);
+    const pdfParse = require('pdf-parse');
 
     const bytes = await fs.promises.readFile(filePath);
-    const pdf = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
+    const pdf = await pdfParse(bytes, { max: samplePages });
 
-    let textLength = 0;
-    const pagesToCheck = Math.min(samplePages, pdf.numPages);
-
-    for (let i = 1; i <= pagesToCheck; i++) {
-      try {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item) => item.str).join(' ');
-        textLength += pageText.trim().length;
-        // eslint-disable-next-line no-unused-vars
-      } catch (_e) {
-        // Page extraction failed
-      }
-    }
+    // If extracted text is very short for multiple pages, likely image-based
+    const textLength = (pdf.text || '').trim().length;
+    const avgPerPage = textLength / Math.min(samplePages, pdf.numpages || 1);
 
     // If average less than 50 characters per page, treat as scanned/image-based
-    const avgPerPage = textLength / pagesToCheck;
     return avgPerPage < 50;
   } catch (error) {
     console.error('Error checking if PDF is image-based:', error.message);
@@ -210,32 +200,21 @@ async function extractPdfWithOCR(filePath, maxPages = 10) {
  */
 export async function extractPdfText(filePath, maxPages = null) {
   try {
+    const { createRequire } = await import('module');
     const fs = await import('fs');
-    const pdfjs = await import('pdfjs-dist');
+    const require = createRequire(import.meta.url);
+    const pdfParse = require('pdf-parse');
 
     console.error(`Extracting text from PDF: ${filePath}`);
 
     const bytes = await fs.promises.readFile(filePath);
-    const pdf = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
+    const pdf = await pdfParse(bytes, { max: maxPages || 0 });
 
-    let fullText = '';
-    const pageCount = pdf.numPages;
-    const pagesToProcess = maxPages ? Math.min(maxPages, pageCount) : pageCount;
+    // Combine text from all pages
+    let fullText = pdf.text || '';
+    const pageCount = pdf.numpages || 1;
 
-    console.error(`PDF has ${pageCount} pages, processing ${pagesToProcess}`);
-
-    for (let i = 1; i <= pagesToProcess; i++) {
-      try {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item) => item.str).join(' ');
-        fullText += pageText + '\n';
-      } catch (pageError) {
-        console.warn(`Failed to extract text from page ${i}:`, pageError.message);
-      }
-    }
-
-    // Calculate metrics
+    // Calculate average text per page
     const textLength = fullText.trim().length;
     const avgPerPage = pageCount > 0 ? textLength / pageCount : 0;
 
@@ -293,26 +272,24 @@ export async function extractPdfText(filePath, maxPages = null) {
  */
 export async function extractPdfPages(filePath, startPage = 0, endPage = null) {
   try {
+    const { createRequire } = await import('module');
     const fs = await import('fs');
-    const pdfjs = await import('pdfjs-dist');
+    const require = createRequire(import.meta.url);
+    const pdfParse = require('pdf-parse');
 
     const bytes = await fs.promises.readFile(filePath);
-    const pdf = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise;
+    const pdf = await pdfParse(bytes);
 
-    const start = Math.max(0, startPage);
-    const end = endPage ? Math.min(pdf.numPages, endPage) : pdf.numPages;
-
+    // Get text from specified page range
+    const pages = pdf.text.split('\n\n'); // pdf-parse includes page breaks
     let text = '';
 
-    for (let i = start + 1; i <= end; i++) {
-      try {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item) => item.str).join(' ');
-        text += pageText + '\n\n';
-      } catch (pageError) {
-        console.warn(`Failed to extract text from page ${i}:`, pageError.message);
-      }
+    if (pages.length > 0) {
+      const start = Math.max(0, startPage);
+      const end = endPage ? Math.min(pages.length, endPage) : pages.length;
+      text = pages.slice(start, end).join('\n\n');
+    } else {
+      text = pdf.text;
     }
 
     return text.trim();
