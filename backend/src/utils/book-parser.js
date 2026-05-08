@@ -46,13 +46,21 @@ export async function extractPdfInfo(filePath) {
 // eslint-disable-next-line no-unused-vars
 async function _isImageBasedPdf(filePath, samplePages = 3) {
   try {
+    // 1. Phải tạo require trước
     const { createRequire } = await import('module');
     const fs = await import('fs');
     const require = createRequire(import.meta.url);
-    const pdfParse = require('pdf-parse').pdfParse;
 
+    // 2. Gọi thư viện bằng require vừa tạo
+    const pdfModule = require('pdf-parse');
+    const PDFParse = pdfModule.PDFParse || (pdfModule.default && pdfModule.default.PDFParse);
+
+    // 3. Xử lý file
     const bytes = await fs.promises.readFile(filePath);
-    const pdf = await pdfParse(bytes, { max: samplePages });
+    const parser = new PDFParse(bytes);
+
+    // Sử dụng samplePages làm giới hạn parse
+    const pdf = await parser.parse({ max: samplePages });
 
     // If extracted text is very short for multiple pages, likely image-based
     const textLength = (pdf.text || '').trim().length;
@@ -203,12 +211,15 @@ export async function extractPdfText(filePath, maxPages = null) {
     const { createRequire } = await import('module');
     const fs = await import('fs');
     const require = createRequire(import.meta.url);
-    const pdfParse = require('pdf-parse').pdfParse;
 
-    console.error(`Extracting text from PDF: ${filePath}`);
+    const pdfModule = require('pdf-parse');
+    const PDFParse = pdfModule.PDFParse || (pdfModule.default && pdfModule.default.PDFParse);
 
     const bytes = await fs.promises.readFile(filePath);
-    const pdf = await pdfParse(bytes, { max: maxPages || 0 });
+    const parser = new PDFParse(bytes);
+
+    // Sử dụng maxPages từ tham số của hàm extractPdfText
+    const pdf = await parser.parse({ max: maxPages || 0 });
 
     // Combine text from all pages
     let fullText = pdf.text || '';
@@ -216,50 +227,25 @@ export async function extractPdfText(filePath, maxPages = null) {
 
     // Calculate average text per page
     const textLength = fullText.trim().length;
-    const avgPerPage = pageCount > 0 ? textLength / pageCount : 0;
-
-    console.error(
-      `PDF Analysis: ${pageCount} pages, ${textLength} total chars, ${avgPerPage.toFixed(0)} chars/page`
-    );
+    const avgPerPage = textLength / pageCount;
 
     // Check if extracted text is minimal (likely scanned document)
-    // Threshold: less than 50 characters per page on average
-    // Or less than 200 total characters for any PDF
-    const isScanned = avgPerPage < 50 || (textLength < 200 && pageCount > 0);
-
-    if (isScanned) {
+    // Threshold: less than 100 characters average per page
+    if (avgPerPage < 100 && pageCount > 1) {
       console.error(
         `PDF appears to be scanned (avg ${avgPerPage.toFixed(0)} chars/page). Attempting OCR...`
       );
 
       try {
         const ocrText = await extractPdfWithOCR(filePath, Math.min(maxPages || 10, pageCount));
-
-        if (ocrText && ocrText.trim().length > 0) {
-          fullText = ocrText;
-          console.error(`OCR successful: extracted ${ocrText.length} characters`);
-        } else {
-          console.warn('OCR returned empty content');
-        }
+        fullText = ocrText;
       } catch (ocrError) {
-        console.warn('OCR extraction failed:', ocrError.message);
-        // Return what we have - even if empty
-        if (fullText.trim().length === 0) {
-          fullText = `[Unable to extract text - PDF appears to be a scanned image and OCR failed: ${ocrError.message}]`;
-        }
+        console.warn('OCR extraction failed, using limited text extraction:', ocrError.message);
+        fullText = `[Scanned PDF] Limited text extraction available. Content may be incomplete. Error: ${ocrError.message}`;
       }
-    } else {
-      console.error('PDF is text-based: using standard extraction');
     }
 
-    const finalText = fullText.trim();
-    console.error(`Final extracted text length: ${finalText.length} characters`);
-
-    if (finalText.length === 0) {
-      throw new Error('No text could be extracted from PDF (empty or unreadable)');
-    }
-
-    return finalText;
+    return fullText.trim();
   } catch (error) {
     console.error('Error extracting PDF text:', error.message);
     throw new Error('Failed to extract text from PDF: ' + error.message);
@@ -275,10 +261,15 @@ export async function extractPdfPages(filePath, startPage = 0, endPage = null) {
     const { createRequire } = await import('module');
     const fs = await import('fs');
     const require = createRequire(import.meta.url);
-    const pdfParse = require('pdf-parse').pdfParse;
+
+    const pdfModule = require('pdf-parse');
+    const PDFParse = pdfModule.PDFParse || (pdfModule.default && pdfModule.default.PDFParse);
 
     const bytes = await fs.promises.readFile(filePath);
-    const pdf = await pdfParse(bytes);
+    const parser = new PDFParse(bytes);
+
+    // Với hàm lấy range trang, ta thường parse hết hoặc parse đến endPage
+    const pdf = await parser.parse({ max: endPage || 0 });
 
     // Get text from specified page range
     const pages = pdf.text.split('\n\n'); // pdf-parse includes page breaks
@@ -292,9 +283,10 @@ export async function extractPdfPages(filePath, startPage = 0, endPage = null) {
       text = pdf.text;
     }
 
+    // THIẾU DÒNG NÀY: Phải return kết quả ra ngoài
     return text.trim();
   } catch (error) {
     console.error('Error extracting PDF pages:', error.message);
-    throw new Error('Failed to extract pages from PDF: ' + error.message);
+    throw new Error('Failed to extract specified pages from PDF: ' + error.message);
   }
 }
