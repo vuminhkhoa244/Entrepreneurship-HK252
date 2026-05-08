@@ -46,6 +46,7 @@ async function getChapterContent(bookId, chapterIndex, userId) {
  * Get PDF content for AI processing
  */
 async function getPdfContent(bookId, userId) {
+  const fs = await import('fs');
   const db = getDb();
   const book = db.prepare('SELECT * FROM books WHERE id = ? AND user_id = ?').get(bookId, userId);
 
@@ -56,12 +57,31 @@ async function getPdfContent(bookId, userId) {
   const filename = basename(book.file_url);
   const filePath = join(process.env.UPLOAD_DIR || '/tmp/uploads', filename);
 
+  // Verify file exists before processing
+  if (!fs.existsSync(filePath)) {
+    logger.error('PDF file not found', { bookId, filePath, fileUrl: book.file_url });
+    throw new Error(`PDF file not found at ${filePath}`);
+  }
+
   try {
+    logger.info('Starting PDF content extraction', { bookId, filePath });
     const text = await extractPdfText(filePath, 50); // Limit to first 50 pages for performance
+
+    if (!text || text.trim().length === 0) {
+      logger.warn('PDF extraction returned empty content', { bookId, filePath });
+      throw new Error('No text content extracted from PDF');
+    }
+
+    logger.info('PDF content extracted successfully', { bookId, contentLength: text.length });
     return text;
   } catch (error) {
-    logger.error('PDF content extraction error', { bookId, error: error.message });
-    throw new Error('Failed to extract PDF content');
+    logger.error('PDF content extraction error', {
+      bookId,
+      filePath,
+      error: error.message,
+      stack: error.stack,
+    });
+    throw error;
   }
 }
 
@@ -209,7 +229,25 @@ router.post('/:bookId/summarize/pdf', async (req, res) => {
       return res.status(400).json({ error: 'This endpoint is only available for PDF files' });
     }
 
-    const content = await getPdfContent(bookId, req.user.id);
+    let content;
+    try {
+      content = await getPdfContent(bookId, req.user.id);
+    } catch (error) {
+      logger.error('Failed to extract PDF content for summarization', {
+        bookId,
+        error: error.message,
+      });
+      return res.status(500).json({
+        error: `Unable to read PDF: ${error.message}. Please ensure the PDF file exists and is readable.`,
+      });
+    }
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({
+        error: 'PDF file appears to be empty or unreadable. Cannot generate summary.',
+      });
+    }
+
     const text = content.substring(0, MAX_TEXT_LENGTH * 2);
 
     const messages = [
@@ -234,7 +272,7 @@ router.post('/:bookId/summarize/pdf', async (req, res) => {
       bookId: req.params.bookId,
       error: err.message,
     });
-    res.status(500).json({ error: 'Failed to generate summary' });
+    res.status(500).json({ error: `Failed to generate summary: ${err.message}` });
   }
 });
 
@@ -441,15 +479,22 @@ router.post('/:bookId/ask', async (req, res) => {
       try {
         const firstChapter = await getChapterContent(bookId, 0, req.user.id);
         contextText = `Book: ${book.title}\nAuthor: ${book.author || 'Unknown'}\n\nContext:\n${firstChapter.substring(0, 8000)}`;
-      } catch {
+      } catch (error) {
+        logger.warn('Failed to extract EPUB content', { bookId, error: error.message });
         contextText = `Book: ${book.title}\nAuthor: ${book.author || 'Unknown'}`;
       }
     } else if (book.file_type === 'pdf') {
       try {
         const pdfContent = await getPdfContent(bookId, req.user.id);
         contextText = `Book: ${book.title}\nAuthor: ${book.author || 'Unknown'}\n\nContent:\n${pdfContent.substring(0, MAX_TEXT_LENGTH)}`;
-      } catch {
-        contextText = `Book: ${book.title}\nAuthor: ${book.author || 'Unknown'}`;
+      } catch (error) {
+        logger.error('Failed to extract PDF content for question', {
+          bookId,
+          error: error.message,
+        });
+        return res.status(500).json({
+          error: `Unable to read PDF content: ${error.message}. Please ensure the PDF file exists and is readable.`,
+        });
       }
     } else {
       contextText = `Book: ${book.title}\nAuthor: ${book.author || 'Unknown'}`;

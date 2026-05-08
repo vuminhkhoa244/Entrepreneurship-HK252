@@ -202,6 +202,7 @@ export async function extractPdfText(filePath, maxPages = null) {
     const fs = await import('fs');
     const bytes = await fs.promises.readFile(filePath);
 
+    console.error(`Extracting text from PDF: ${filePath}`);
     const pdf = await pdfParse(bytes, { max: maxPages || 0 });
 
     // Combine text from all pages
@@ -210,25 +211,50 @@ export async function extractPdfText(filePath, maxPages = null) {
 
     // Calculate average text per page
     const textLength = fullText.trim().length;
-    const avgPerPage = textLength / pageCount;
+    const avgPerPage = pageCount > 0 ? textLength / pageCount : 0;
+
+    console.error(
+      `PDF Analysis: ${pageCount} pages, ${textLength} total chars, ${avgPerPage.toFixed(0)} chars/page`
+    );
 
     // Check if extracted text is minimal (likely scanned document)
-    // Threshold: less than 100 characters average per page
-    if (avgPerPage < 100 && pageCount > 1) {
+    // Threshold: less than 50 characters per page on average
+    // Or less than 200 total characters for any PDF
+    const isScanned = avgPerPage < 50 || (textLength < 200 && pageCount > 0);
+
+    if (isScanned) {
       console.error(
         `PDF appears to be scanned (avg ${avgPerPage.toFixed(0)} chars/page). Attempting OCR...`
       );
 
       try {
         const ocrText = await extractPdfWithOCR(filePath, Math.min(maxPages || 10, pageCount));
-        fullText = ocrText;
+
+        if (ocrText && ocrText.trim().length > 0) {
+          fullText = ocrText;
+          console.error(`OCR successful: extracted ${ocrText.length} characters`);
+        } else {
+          console.warn('OCR returned empty content');
+        }
       } catch (ocrError) {
-        console.warn('OCR extraction failed, using limited text extraction:', ocrError.message);
-        fullText = `[Scanned PDF] Limited text extraction available. Content may be incomplete. Error: ${ocrError.message}`;
+        console.warn('OCR extraction failed:', ocrError.message);
+        // Return what we have - even if empty
+        if (fullText.trim().length === 0) {
+          fullText = `[Unable to extract text - PDF appears to be a scanned image and OCR failed: ${ocrError.message}]`;
+        }
       }
+    } else {
+      console.error('PDF is text-based: using standard extraction');
     }
 
-    return fullText.trim();
+    const finalText = fullText.trim();
+    console.error(`Final extracted text length: ${finalText.length} characters`);
+
+    if (finalText.length === 0) {
+      throw new Error('No text could be extracted from PDF (empty or unreadable)');
+    }
+
+    return finalText;
   } catch (error) {
     console.error('Error extracting PDF text:', error.message);
     throw new Error('Failed to extract text from PDF: ' + error.message);
