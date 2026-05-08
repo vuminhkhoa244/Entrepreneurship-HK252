@@ -49,7 +49,7 @@ async function _isImageBasedPdf(filePath, samplePages = 3) {
     const { createRequire } = await import('module');
     const fs = await import('fs');
     const require = createRequire(import.meta.url);
-    const pdfParse = require('pdf-parse');
+    const pdfParse = require('pdf-parse').pdfParse;
 
     const bytes = await fs.promises.readFile(filePath);
     const pdf = await pdfParse(bytes, { max: samplePages });
@@ -203,7 +203,7 @@ export async function extractPdfText(filePath, maxPages = null) {
     const { createRequire } = await import('module');
     const fs = await import('fs');
     const require = createRequire(import.meta.url);
-    const pdfParse = require('pdf-parse');
+    const pdfParse = require('pdf-parse').pdfParse;
 
     console.error(`Extracting text from PDF: ${filePath}`);
 
@@ -275,7 +275,7 @@ export async function extractPdfPages(filePath, startPage = 0, endPage = null) {
     const { createRequire } = await import('module');
     const fs = await import('fs');
     const require = createRequire(import.meta.url);
-    const pdfParse = require('pdf-parse');
+    const pdfParse = require('pdf-parse').pdfParse;
 
     const bytes = await fs.promises.readFile(filePath);
     const pdf = await pdfParse(bytes);
