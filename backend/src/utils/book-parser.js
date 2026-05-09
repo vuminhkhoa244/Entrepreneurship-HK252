@@ -53,9 +53,10 @@ async function _isImageBasedPdf(filePath, samplePages = 3) {
     const pdfModule = require('pdf-parse');
     const bytes = await fs.promises.readFile(filePath);
 
-    // pdf-parse v2: use function; handle ESM default export
-    const parseFn = pdfModule.default || pdfModule;
-    const pdf = await parseFn(bytes, { max: samplePages });
+    // pdf-parse v2 exports as { PDFParse: class } or { default: class }
+    const PDFParseClass = pdfModule.PDFParse || pdfModule.default || pdfModule;
+    const parser = new PDFParseClass(bytes);
+    const pdf = await parser.parse({ max: samplePages });
 
     // If extracted text is very short for multiple pages, likely image-based
     const textLength = (pdf.text || '').trim().length;
@@ -210,8 +211,9 @@ export async function extractPdfText(filePath, maxPages = null) {
     const pdfModule = require('pdf-parse');
     const bytes = await fs.promises.readFile(filePath);
 
-    const parseFn = pdfModule.default || pdfModule;
-    const pdf = await parseFn(bytes, { max: maxPages || 0 });
+    const PDFParseClass = pdfModule.PDFParse || pdfModule.default || pdfModule;
+    const parser = new PDFParseClass(bytes);
+    const pdf = await parser.parse({ max: maxPages || 0 });
 
     // Combine text from all pages
     let fullText = pdf.text || '';
@@ -257,8 +259,9 @@ export async function extractPdfPages(filePath, startPage = 0, endPage = null) {
     const pdfModule = require('pdf-parse');
     const bytes = await fs.promises.readFile(filePath);
 
-    const parseFn = pdfModule.default || pdfModule;
-    const pdf = await parseFn(bytes, { max: endPage || 0 });
+    const PDFParseClass = pdfModule.PDFParse || pdfModule.default || pdfModule;
+    const parser = new PDFParseClass(bytes);
+    const pdf = await parser.parse({ max: endPage || 0 });
 
     // Get text from specified page range
     const pages = pdf.text.split('\n\n'); // pdf-parse includes page breaks
