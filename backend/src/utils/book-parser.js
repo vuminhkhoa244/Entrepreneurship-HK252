@@ -46,17 +46,25 @@ export async function extractPdfInfo(filePath) {
 // eslint-disable-next-line no-unused-vars
 async function _isImageBasedPdf(filePath, samplePages = 3) {
   try {
+    // 1. Phải tạo require trước
     const { createRequire } = await import('module');
     const fs = await import('fs');
     const require = createRequire(import.meta.url);
 
-    const pdfModule = require('pdf-parse');
-    const bytes = await fs.promises.readFile(filePath);
+    // 2. Gọi thư viện bằng require vừa tạo
+    const { PDFParse } = require('pdf-parse');
 
-    // pdf-parse v2 exports as { PDFParse: class } or { default: class }
-    const PDFParseClass = pdfModule.PDFParse || pdfModule.default || pdfModule;
-    const parser = new PDFParseClass(bytes);
-    const pdf = await parser.parse({ max: samplePages });
+    // 3. Xử lý file
+    const bytes = await fs.promises.readFile(filePath);
+    const parser = new PDFParse({ data: bytes, verbosity: 0 });
+    await parser.load();
+
+    // Get all text
+    const textResult = await parser.getText();
+    const pdf = {
+      text: textResult.text || '',
+      numpages: textResult.total || 1,
+    };
 
     // If extracted text is very short for multiple pages, likely image-based
     const textLength = (pdf.text || '').trim().length;
@@ -208,16 +216,15 @@ export async function extractPdfText(filePath, maxPages = null) {
     const fs = await import('fs');
     const require = createRequire(import.meta.url);
 
-    const pdfModule = require('pdf-parse');
+    const { PDFParse } = require('pdf-parse');
     const bytes = await fs.promises.readFile(filePath);
+    const parser = new PDFParse({ data: bytes, verbosity: 0 });
+    await parser.load();
 
-    const PDFParseClass = pdfModule.PDFParse || pdfModule.default || pdfModule;
-    const parser = new PDFParseClass(bytes);
-    const pdf = await parser.parse({ max: maxPages || 0 });
-
-    // Combine text from all pages
-    let fullText = pdf.text || '';
-    const pageCount = pdf.numpages || 1;
+    // Get all text
+    const textResult = await parser.getText();
+    let fullText = textResult.text || '';
+    const pageCount = textResult.total || 1;
 
     // Calculate average text per page
     const textLength = fullText.trim().length;
@@ -256,23 +263,25 @@ export async function extractPdfPages(filePath, startPage = 0, endPage = null) {
     const fs = await import('fs');
     const require = createRequire(import.meta.url);
 
-    const pdfModule = require('pdf-parse');
+    const { PDFParse } = require('pdf-parse');
     const bytes = await fs.promises.readFile(filePath);
+    const parser = new PDFParse({ data: bytes, verbosity: 0 });
+    await parser.load();
 
-    const PDFParseClass = pdfModule.PDFParse || pdfModule.default || pdfModule;
-    const parser = new PDFParseClass(bytes);
-    const pdf = await parser.parse({ max: endPage || 0 });
+    // Get all text
+    const textResult = await parser.getText();
 
     // Get text from specified page range
-    const pages = pdf.text.split('\n\n'); // pdf-parse includes page breaks
+    const pages = textResult.pages || [];
     let text = '';
 
     if (pages.length > 0) {
       const start = Math.max(0, startPage);
       const end = endPage ? Math.min(pages.length, endPage) : pages.length;
-      text = pages.slice(start, end).join('\n\n');
+      const selected = pages.slice(start, end);
+      text = selected.map((p) => p.text).join('\n\n');
     } else {
-      text = pdf.text;
+      text = textResult.text || '';
     }
 
     // THIẾU DÒNG NÀY: Phải return kết quả ra ngoài
