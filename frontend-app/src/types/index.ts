@@ -59,3 +59,21 @@ export interface User {
   displayName: string;
   [key: string]: unknown;
 }
+
+export interface AIMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
+export interface AISession {
+  id: string;
+  bookId: string;
+  chapterIndex?: number;
+  title: string;
+  messages: AIMessage[];
+  context?: string;
+  createdAt: string;
+  updatedAt: string;
+}

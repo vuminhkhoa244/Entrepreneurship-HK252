@@ -21,6 +21,9 @@ import type { RouteProp } from '@react-navigation/native';
 import { FONT_SIZES } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AISessionStorage } from '../utils/aiSessionStorage';
+import { AISessionsList } from '../components/AISessionsList';
+import type { AISession, AIMessage } from '../types';
 
 type MessageRole = 'user' | 'assistant';
 
@@ -44,6 +47,10 @@ export default function AIScreen() {
   const [loading, setLoading] = useState(false);
   const [context, setContext] = useState<string>('');
   const scrollRef = useRef<ScrollView>(null);
+  const [currentSession, setCurrentSession] = useState<AISession | null>(null);
+  const [sessionsModalVisible, setSessionsModalVisible] = useState(false);
+  const [sessionTitle, setSessionTitle] = useState('');
+  const [showNewSessionInput, setShowNewSessionInput] = useState(false);
 
   // Load chapter context if chapterIndex provided
   useEffect(() => {
@@ -59,6 +66,39 @@ export default function AIScreen() {
     };
     loadContext();
   }, [bookId, chapterIndex]);
+
+  // Load current session or initialize new one
+  useEffect(() => {
+    const initializeSession = async () => {
+      try {
+        const currentSessionId = await AISessionStorage.getCurrentSessionId();
+        if (currentSessionId) {
+          const session = await AISessionStorage.getSession(currentSessionId);
+          if (session && session.bookId === bookId) {
+            setCurrentSession(session);
+            // Convert AIMessage to Message for display
+            const displayMessages = session.messages.map((msg) => ({
+              id: msg.id,
+              role: msg.role,
+              content: msg.content,
+              timestamp: new Date(msg.timestamp),
+            }));
+            setMessages(displayMessages);
+            if (session.context) {
+              setContext(session.context);
+            }
+            return;
+          }
+        }
+        // No valid current session, start fresh
+        await AISessionStorage.clearCurrentSession();
+      } catch (error) {
+        console.error('Failed to initialize session:', error);
+      }
+    };
+
+    initializeSession();
+  }, [bookId]);
 
   // Auto-scroll when new messages arrive
   useEffect(() => {
@@ -95,6 +135,26 @@ export default function AIScreen() {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
+
+      // Save message to current session if exists
+      if (currentSession) {
+        const updatedMessages: AIMessage[] = [
+          ...currentSession.messages,
+          {
+            id: userMessage.id,
+            role: 'user',
+            content: userMessage.content,
+            timestamp: userMessage.timestamp.toISOString(),
+          },
+          {
+            id: assistantMessage.id,
+            role: 'assistant',
+            content: assistantMessage.content,
+            timestamp: assistantMessage.timestamp.toISOString(),
+          },
+        ];
+        await AISessionStorage.updateSession(currentSession.id, { messages: updatedMessages });
+      }
     } catch (e: unknown) {
       if (axios.isAxiosError(e)) {
         Alert.alert('Error', e.response?.data?.error || 'Failed to get AI response');
@@ -104,6 +164,44 @@ export default function AIScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const createNewSession = async () => {
+    if (!sessionTitle.trim()) {
+      Alert.alert('Error', 'Please enter a session name');
+      return;
+    }
+
+    try {
+      const newSession = await AISessionStorage.createSession(
+        bookId,
+        sessionTitle.trim(),
+        chapterIndex,
+        context
+      );
+      setCurrentSession(newSession);
+      setMessages([]);
+      setSessionTitle('');
+      setShowNewSessionInput(false);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to create new session');
+      console.error('Create session error:', error);
+    }
+  };
+
+  const handleSessionSelect = async (session: AISession) => {
+    setCurrentSession(session);
+    const displayMessages = session.messages.map((msg) => ({
+      id: msg.id,
+      role: msg.role,
+      content: msg.content,
+      timestamp: new Date(msg.timestamp),
+    }));
+    setMessages(displayMessages);
+    if (session.context) {
+      setContext(session.context);
+    }
+    await AISessionStorage.setCurrentSessionId(session.id);
   };
 
   const summarizeChapter = async () => {
@@ -202,9 +300,63 @@ export default function AIScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>AI Assistant</Text>
-        <View style={{ width: 24 }} />
+        <View style={styles.headerCenter}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>AI Assistant</Text>
+          {currentSession && (
+            <Text style={[styles.sessionName, { color: colors.textDim }]}>
+              {currentSession.title}
+            </Text>
+          )}
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => setSessionsModalVisible(true)} style={styles.headerBtn}>
+            <Ionicons name="folder-open-outline" size={20} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setShowNewSessionInput(!showNewSessionInput)}
+            style={styles.headerBtn}
+          >
+            <Ionicons name="add-circle-outline" size={20} color={colors.text} />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* New Session Input */}
+      {showNewSessionInput && (
+        <View
+          style={[
+            styles.newSessionContainer,
+            { backgroundColor: colors.surface, borderBottomColor: colors.border },
+          ]}
+        >
+          <TextInput
+            style={[
+              styles.newSessionInput,
+              { color: colors.text, backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+            placeholder="Enter session name..."
+            placeholderTextColor={colors.textMuted}
+            value={sessionTitle}
+            onChangeText={setSessionTitle}
+            maxLength={100}
+          />
+          <TouchableOpacity
+            onPress={createNewSession}
+            style={[styles.newSessionBtn, { backgroundColor: colors.accent }]}
+          >
+            <Ionicons name="checkmark" size={20} color={colors.white} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              setShowNewSessionInput(false);
+              setSessionTitle('');
+            }}
+            style={[styles.newSessionBtn, { backgroundColor: colors.textMuted }]}
+          >
+            <Ionicons name="close" size={20} color={colors.white} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Quick Actions */}
       {chapterIndex !== undefined && (
@@ -327,6 +479,15 @@ export default function AIScreen() {
           AI can make mistakes. Consider verifying important information.
         </Text>
       </View>
+
+      {/* Sessions Modal */}
+      <AISessionsList
+        visible={sessionsModalVisible}
+        bookId={bookId}
+        onClose={() => setSessionsModalVisible(false)}
+        onSessionSelect={handleSessionSelect}
+        colors={colors}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -341,7 +502,44 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
   headerTitle: { fontSize: FONT_SIZES.lg, fontWeight: '600' },
+  sessionName: {
+    fontSize: FONT_SIZES.xs,
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  headerBtn: {
+    padding: 4,
+  },
+  newSessionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 8,
+    borderBottomWidth: 1,
+  },
+  newSessionInput: {
+    flex: 1,
+    fontSize: FONT_SIZES.md,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  newSessionBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   quickActions: {
     flexDirection: 'row',
     padding: 12,
