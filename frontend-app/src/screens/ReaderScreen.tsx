@@ -44,6 +44,8 @@ export default function ReaderScreen() {
   const [notes, setNotes] = useState<{ id: string; content: string }[]>([]);
   const [noteInput, setNoteInput] = useState('');
   const [showAIOptions, setShowAIOptions] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [initialChapterIndex, setInitialChapterIndex] = useState(0);
 
   const scrollRef = useRef<ScrollView>(null);
   const { colors } = useTheme();
@@ -87,9 +89,28 @@ export default function ReaderScreen() {
       } catch (e) {
         console.error(e);
       }
+      // Start reading session
+      try {
+        const { data } = await ReaderAPI.startSession(bookId);
+        setSessionId(data.sessionId);
+        setInitialChapterIndex(0);
+      } catch (e) {
+        console.error(e);
+      }
     }
     loadInitialData();
   }, [bookId, loadChapter]);
+
+  useEffect(() => {
+    return () => {
+      // End reading session when leaving the screen
+      if (sessionId && chapter) {
+        const chaptersRead = Math.max(0, chapter.chapterIndex - initialChapterIndex + 1);
+        const pagesRead = chaptersRead * 30; // Estimate ~30 pages per chapter
+        ReaderAPI.endSession(bookId, sessionId, pagesRead).catch(() => {});
+      }
+    };
+  }, [sessionId, chapter, bookId, initialChapterIndex]);
 
   const updateProgress = useCallback(
     async (chapterIndex: number) => {

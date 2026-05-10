@@ -29,9 +29,9 @@ export default function PDFReaderScreen() {
 
   const [loading, setLoading] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [pagesRead, setPagesRead] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [initialPage, setInitialPage] = useState(1);
   const [pdfUri, setPdfUri] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
 
@@ -53,10 +53,12 @@ export default function PDFReaderScreen() {
   useEffect(() => {
     return () => {
       if (sessionId) {
-        ReaderAPI.endSession(bookId, sessionId, pagesRead).catch(() => {});
+        // Calculate actual pages read as the difference between current and initial page
+        const actualPagesRead = Math.max(0, currentPage - initialPage);
+        ReaderAPI.endSession(bookId, sessionId, actualPagesRead).catch(() => {});
       }
     };
-  }, [sessionId, pagesRead, bookId]);
+  }, [sessionId, currentPage, bookId, initialPage]);
 
   const loadReaderData = useCallback(async () => {
     try {
@@ -216,9 +218,10 @@ export default function PDFReaderScreen() {
         maxScale={3.0}
         onLoadComplete={(pages, page) => {
           setTotalPages(pages);
-          setPagesRead(pages);
-          pageRef.current = Number(page);
-          setCurrentPage(Number(page));
+          const currentPageNum = Number(page);
+          pageRef.current = currentPageNum;
+          setCurrentPage(currentPageNum);
+          setInitialPage(currentPageNum);
           setPdfReady(true);
           setLoading(false);
           setForcedPage(null);
