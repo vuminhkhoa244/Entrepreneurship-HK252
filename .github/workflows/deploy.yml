@@ -90,7 +90,6 @@ jobs:
       #     password: ${{ secrets.DOCKER_PASSWORD }}
 
   deploy-frontend:
-    if: contains(join(github.event.commits.*.modified, ','), 'frontend-app/')
     runs-on: ubuntu-latest
     environment: production
     
